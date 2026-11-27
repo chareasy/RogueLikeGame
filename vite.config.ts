@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: './',
+  // Project Pages: https://chareasy.github.io/RogueLikeGame/
+  base: '/RogueLikeGame/',
   server: {
     host: '0.0.0.0',
     port: 5173,
