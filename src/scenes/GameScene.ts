@@ -10,11 +10,13 @@ import {
   ARENA_SIZE,
   COLORS,
   MATCH_DURATION_MS,
+  PLAYER,
 } from '../config/constants';
 import type { EnemyKind } from '../config/enemies';
 import { Player } from '../entities/Player';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EnemySystem } from '../systems/EnemySystem';
+import { FeedbackFX } from '../systems/FeedbackFX';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { XpPool } from '../systems/XpPool';
 import { Hud } from '../ui/Hud';
@@ -27,12 +29,14 @@ export class GameScene extends Phaser.Scene {
   private weapons!: WeaponSystem;
   private xpPool!: XpPool;
   private combat!: CombatSystem;
+  private fx!: FeedbackFX;
   private hud!: Hud;
   private levelUpUI!: LevelUpUI;
   private resultUI!: ResultUI;
 
   private elapsedMs = 0;
   private ended = false;
+  private magnetUntil = 0;
 
   constructor() {
     super('GameScene');
@@ -41,6 +45,7 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.elapsedMs = 0;
     this.ended = false;
+    this.magnetUntil = 0;
 
     audioDirector.attach(this);
     audioDirector.unlock();
@@ -57,6 +62,7 @@ export class GameScene extends Phaser.Scene {
     this.weapons = new WeaponSystem(this);
     this.xpPool = new XpPool(this);
     this.combat = new CombatSystem();
+    this.fx = new FeedbackFX(this);
     this.hud = new Hud(this, character.name);
     this.levelUpUI = new LevelUpUI(this);
     this.resultUI = new ResultUI(this);
@@ -69,8 +75,11 @@ export class GameScene extends Phaser.Scene {
       ARENA_SIZE + 80,
     );
 
+    for (let i = 0; i < 8; i += 1) {
+      this.enemies.spawnKind('chaser', 0, 0, 280 + i * 36);
+    }
     for (let i = 0; i < 4; i += 1) {
-      this.enemies.spawnKind('chaser', 0, 0, 320 + i * 40);
+      this.enemies.spawnKind('swarm', 0, 0, 340 + i * 28);
     }
   }
 
@@ -119,16 +128,27 @@ export class GameScene extends Phaser.Scene {
       this.weapons.projectiles,
       this.enemies.enemies,
       (x, y, value) => this.xpPool.spawn(x, y, value),
-      (kind) => audioDirector.playKill(kind),
+      (kind) => {
+        this.pulseMagnet(time);
+        audioDirector.playKill(kind);
+      },
+      this.fx,
     );
 
+    this.flushSkillHits();
     this.flushSkillKills(this.weapons.pendingOrbitKills);
     this.flushSkillKills(this.weapons.pendingAuraKills);
 
     this.combat.resolveEnemyContact(time, this.player, this.enemies.enemies);
     this.combat.resolveEnemyBullets(time, this.player, this.enemies.bullets);
 
-    const gained = this.combat.collectXp(delta, this.player, this.xpPool.orbs);
+    const magnetBoost = time < this.magnetUntil;
+    const gained = this.combat.collectXp(
+      delta,
+      this.player,
+      this.xpPool.orbs,
+      magnetBoost,
+    );
     if (gained > 0) {
       const levels = this.player.stats.addXp(gained);
       if (levels > 0) {
@@ -157,6 +177,21 @@ export class GameScene extends Phaser.Scene {
     this.checkEndConditions();
   }
 
+  private pulseMagnet(time: number): void {
+    this.magnetUntil = Math.max(this.magnetUntil, time + PLAYER.killMagnetMs);
+    this.xpPool.magnetizeAll();
+  }
+
+  private flushSkillHits(): void {
+    const pending = this.weapons.pendingHits;
+    while (pending.length > 0) {
+      const hit = pending.pop()!;
+      this.fx.damageNumber(hit.x, hit.y - 10, hit.amount, hit.crit);
+      if (hit.killed) this.fx.killBurst(hit.x, hit.y);
+      else this.fx.hitBurst(hit.x, hit.y);
+    }
+  }
+
   private flushSkillKills(
     pending: Array<{ x: number; y: number; xp: number; kind: EnemyKind }>,
   ): void {
@@ -164,6 +199,7 @@ export class GameScene extends Phaser.Scene {
       const kill = pending.pop()!;
       this.combat.kills += 1;
       this.xpPool.spawn(kill.x, kill.y, kill.xp);
+      this.pulseMagnet(this.time.now);
       audioDirector.playKill(kill.kind);
     }
   }
@@ -188,7 +224,6 @@ export class GameScene extends Phaser.Scene {
     if (this.ended) return;
     this.ended = true;
     this.hud.setVisible(false);
-    // Ease back toward darker menu tone after the run ends.
     audioDirector.playMenu();
     this.resultUI.show(
       won,

@@ -129,8 +129,19 @@ export class WeaponSystem {
         if (time < readyAt) continue;
         const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
         if (dist > enemy.radius + 14) continue;
-        const dmg = player.stats.damage * 0.85 * player.stats.rollCritMultiplier();
-        const dead = enemy.takeDamage(dmg, time);
+        const mult = player.stats.rollCritMultiplier();
+        const dmg = player.stats.damage * 0.85 * mult;
+        const safe = Math.max(1, dist);
+        const nx = (enemy.x - x) / safe;
+        const ny = (enemy.y - y) / safe;
+        const dead = enemy.takeDamage(dmg, time, nx * 8, ny * 8);
+        this.pendingHits.push({
+          x: enemy.x,
+          y: enemy.y,
+          amount: dmg,
+          crit: mult > 1,
+          killed: dead,
+        });
         blade.hitCooldown.set(ei, time + 220);
         if (dead) {
           this.pendingOrbitKills.push({
@@ -157,6 +168,13 @@ export class WeaponSystem {
     xp: number;
     kind: Enemy['kind'];
   }> = [];
+  readonly pendingHits: Array<{
+    x: number;
+    y: number;
+    amount: number;
+    crit: boolean;
+    killed: boolean;
+  }> = [];
 
   private updateAura(time: number, player: Player, enemies: Enemy[]): void {
     const radius = Math.max(40, player.stats.auraRadius);
@@ -177,9 +195,16 @@ export class WeaponSystem {
         enemy.y,
       );
       if (dist > radius + enemy.radius) continue;
-      const dmg =
-        player.stats.auraDamage * player.stats.rollCritMultiplier();
+      const mult = player.stats.rollCritMultiplier();
+      const dmg = player.stats.auraDamage * mult;
       const dead = enemy.takeDamage(dmg, time);
+      this.pendingHits.push({
+        x: enemy.x,
+        y: enemy.y,
+        amount: dmg,
+        crit: mult > 1,
+        killed: dead,
+      });
       if (dead) {
         enemy.kill();
         this.pendingAuraKills.push({

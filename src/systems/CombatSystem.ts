@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import type { Projectile } from '../entities/Projectile';
 import type { EnemyBullet } from '../entities/Enemy';
 import type { XpOrb } from '../entities/XpOrb';
+import type { FeedbackFX } from './FeedbackFX';
 
 export class CombatSystem {
   kills = 0;
@@ -15,6 +16,7 @@ export class CombatSystem {
     enemies: Enemy[],
     spawnXp: (x: number, y: number, value: number) => void,
     onKill?: (kind: EnemyKind) => void,
+    fx?: FeedbackFX,
   ): void {
     for (const projectile of projectiles) {
       if (!projectile.active) continue;
@@ -31,9 +33,16 @@ export class CombatSystem {
         if (dist > projectile.radius + enemy.radius) continue;
 
         projectile.hitIds.add(i);
-        const dead = enemy.takeDamage(projectile.damage, time);
+        const crit = projectile.damage >= 20 && Math.random() < 0.25;
+        const amount = projectile.damage;
+        const nx = (enemy.x - projectile.x) / (dist || 1);
+        const ny = (enemy.y - projectile.y) / (dist || 1);
+        const dead = enemy.takeDamage(amount, time, nx * 10, ny * 10);
+        fx?.damageNumber(enemy.x, enemy.y - enemy.radius, amount, crit);
+        fx?.hitBurst(enemy.x, enemy.y);
         if (dead) {
           const kind = enemy.kind;
+          fx?.killBurst(enemy.x, enemy.y);
           spawnXp(enemy.x, enemy.y, enemy.xp);
           enemy.kill();
           this.kills += 1;
@@ -97,6 +106,7 @@ export class CombatSystem {
     delta: number,
     player: Player,
     orbs: XpOrb[],
+    magnetBoost = false,
   ): number {
     let gained = 0;
     for (const orb of orbs) {
@@ -106,6 +116,7 @@ export class CombatSystem {
         player.x,
         player.y,
         player.stats.pickupRadius,
+        magnetBoost,
       );
     }
     return gained;

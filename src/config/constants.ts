@@ -15,9 +15,11 @@ export const PLAYER = {
   speed: 175,
   maxHp: 100,
   invulnMs: 650,
-  pickupRadius: 56,
-  xpToLevelBase: 10,
-  xpToLevelGrowth: 1.2,
+  pickupRadius: 90,
+  xpToLevelBase: 8,
+  xpToLevelGrowth: 1.16,
+  /** Extra magnet window after each kill (ms). */
+  killMagnetMs: 900,
 };
 
 export const WEAPON = {

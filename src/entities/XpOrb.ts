@@ -29,21 +29,34 @@ export class XpOrb {
     this.graphic.setActive(true);
   }
 
-  update(delta: number, px: number, py: number, pickupRadius: number): number {
+  forceMagnet(): void {
+    if (this.active) this.magnetized = true;
+  }
+
+  update(
+    delta: number,
+    px: number,
+    py: number,
+    pickupRadius: number,
+    magnetBoost = false,
+  ): number {
     if (!this.active) return 0;
 
     const dx = px - this.x;
     const dy = py - this.y;
     const dist = Math.hypot(dx, dy);
 
-    if (dist <= 12) {
+    if (dist <= 16) {
       this.kill();
       return this.value;
     }
 
-    if (dist <= pickupRadius || this.magnetized) {
+    // Soft pull starts earlier than hard pickup; kills also force magnetize.
+    const softRadius = pickupRadius * (magnetBoost ? 2.8 : 1.65);
+    if (dist <= softRadius || this.magnetized || magnetBoost) {
       this.magnetized = true;
-      const speed = 280 + (pickupRadius - Math.min(dist, pickupRadius)) * 2;
+      const base = magnetBoost ? 520 : 360;
+      const speed = base + Math.max(0, softRadius - dist) * 2.2;
       const nx = dx / (dist || 1);
       const ny = dy / (dist || 1);
       this.x += (nx * speed * delta) / 1000;
@@ -56,6 +69,7 @@ export class XpOrb {
 
   kill(): void {
     this.active = false;
+    this.magnetized = false;
     this.graphic.setVisible(false);
     this.graphic.setActive(false);
   }

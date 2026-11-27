@@ -108,10 +108,15 @@ export class Enemy {
     }
   }
 
-  takeDamage(amount: number, time: number): boolean {
+  takeDamage(amount: number, time: number, knockbackX = 0, knockbackY = 0): boolean {
     this.hp -= amount;
     this.flashUntil = time + 80;
     this.body.setTintFill(0xffffff);
+    if (knockbackX !== 0 || knockbackY !== 0) {
+      this.x += knockbackX;
+      this.y += knockbackY;
+      this.body.setPosition(this.x, this.y);
+    }
     if (this.kind === 'elite' || this.kind === 'boss' || this.kind === 'tank') {
       this.syncHpBar();
     }
