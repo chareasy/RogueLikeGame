@@ -64,11 +64,16 @@ export class Hud {
       .setOrigin(1, 0);
 
     const hint = scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 12, 'WASD / 方向键移动 · 自动攻击', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '12px',
-        color: '#9fb0d0',
-      })
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT - 12,
+        'WASD / 摇杆移动 · 鼠标可微调瞄准 · 自动攻击',
+        {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '12px',
+          color: '#9fb0d0',
+        },
+      )
       .setOrigin(0.5, 1);
 
     this.root.add([

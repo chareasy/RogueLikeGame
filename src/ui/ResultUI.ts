@@ -15,6 +15,7 @@ export class ResultUI {
     level: number,
     elapsedMs: number,
     characterName = '',
+    unlock?: { unlockedBoost: boolean; unlockedTint: boolean },
   ): void {
     this.root.removeAll(true);
     this.root.setVisible(true);
@@ -23,7 +24,7 @@ export class ResultUI {
       .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050814, 0.8);
 
     const title = this.scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 80, won ? '胜利！' : '你倒下了', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, won ? '胜利！' : '你倒下了', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '42px',
         color: won ? '#7cf29c' : '#ff6b6b',
@@ -36,7 +37,7 @@ export class ResultUI {
     const stats = this.scene.add
       .text(
         GAME_WIDTH / 2,
-        GAME_HEIGHT / 2 - 10,
+        GAME_HEIGHT / 2 - 30,
         `${characterName ? characterName + ' · ' : ''}存活 ${mins}:${secs
           .toString()
           .padStart(2, '0')} · 等级 ${level} · 击杀 ${kills}`,
@@ -48,11 +49,27 @@ export class ResultUI {
       )
       .setOrigin(0.5);
 
+    const unlockBits: string[] = [];
+    if (unlock?.unlockedBoost) unlockBits.push('解锁：起始武器强化');
+    if (unlock?.unlockedTint) unlockBits.push('解锁：金色皮肤');
+    const unlockText = this.scene.add
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 + 8,
+        unlockBits.length > 0 ? unlockBits.join(' · ') : '继续挑战可解锁起始强化 / 皮肤',
+        {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '14px',
+          color: unlockBits.length > 0 ? '#ffe66d' : '#9fb0d0',
+        },
+      )
+      .setOrigin(0.5);
+
     const again = this.scene.add
-      .rectangle(GAME_WIDTH / 2 - 110, GAME_HEIGHT / 2 + 80, 180, 48, 0x4fd1c5, 1)
+      .rectangle(GAME_WIDTH / 2 - 110, GAME_HEIGHT / 2 + 90, 180, 48, 0x4fd1c5, 1)
       .setInteractive({ useHandCursor: true });
     const againText = this.scene.add
-      .text(GAME_WIDTH / 2 - 110, GAME_HEIGHT / 2 + 80, '换角色再战', {
+      .text(GAME_WIDTH / 2 - 110, GAME_HEIGHT / 2 + 90, '换角色再战', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '16px',
         color: '#0b1020',
@@ -61,11 +78,11 @@ export class ResultUI {
       .setOrigin(0.5);
 
     const retry = this.scene.add
-      .rectangle(GAME_WIDTH / 2 + 110, GAME_HEIGHT / 2 + 80, 180, 48, 0x243556, 1)
+      .rectangle(GAME_WIDTH / 2 + 110, GAME_HEIGHT / 2 + 90, 180, 48, 0x243556, 1)
       .setStrokeStyle(2, 0x4fd1c5, 1)
       .setInteractive({ useHandCursor: true });
     const retryText = this.scene.add
-      .text(GAME_WIDTH / 2 + 110, GAME_HEIGHT / 2 + 80, '同角色重开', {
+      .text(GAME_WIDTH / 2 + 110, GAME_HEIGHT / 2 + 90, '同角色重开', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '16px',
         color: '#e8eefc',
@@ -80,6 +97,6 @@ export class ResultUI {
       this.scene.scene.restart();
     });
 
-    this.root.add([dim, title, stats, again, againText, retry, retryText]);
+    this.root.add([dim, title, stats, unlockText, again, againText, retry, retryText]);
   }
 }

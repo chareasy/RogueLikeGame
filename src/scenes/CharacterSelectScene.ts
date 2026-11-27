@@ -3,12 +3,14 @@ import { audioDirector } from '../audio/AudioDirector';
 import { ASSET_KEYS } from '../config/assets';
 import { CHARACTERS, type CharacterId } from '../config/characters';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { hasStarterBoost, hasTintSkin, loadMeta } from '../config/meta';
 
 export class CharacterSelectScene extends Phaser.Scene {
   private selected: CharacterId = 'knight';
   private cards: Phaser.GameObjects.Container[] = [];
   private detailText!: Phaser.GameObjects.Text;
   private keyHandlers: Array<() => void> = [];
+  private meta = loadMeta();
 
   constructor() {
     super('CharacterSelectScene');
@@ -17,6 +19,7 @@ export class CharacterSelectScene extends Phaser.Scene {
   create(): void {
     this.cards = [];
     this.keyHandlers = [];
+    this.meta = loadMeta();
 
     audioDirector.attach(this);
     audioDirector.unlock();
@@ -142,9 +145,11 @@ export class CharacterSelectScene extends Phaser.Scene {
       })
       .setOrigin(0, 0);
 
-    const portrait = this.add.image(0, -48, hero.assetKey).setDisplaySize(88, 88);
+    const portrait = this.add.image(0, -52, hero.assetKey).setDisplaySize(88, 88);
+    if (hasTintSkin(this.meta, id)) portrait.setTint(0xffe0a3);
+
     const name = this.add
-      .text(0, 28, hero.name, {
+      .text(0, 22, hero.name, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '16px',
         color: hero.accent,
@@ -152,14 +157,25 @@ export class CharacterSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const title = this.add
-      .text(0, 54, hero.title, {
+      .text(0, 46, hero.title, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '12px',
         color: '#9fb0d0',
       })
       .setOrigin(0.5);
+
+    const unlockBits: string[] = [];
+    if (hasStarterBoost(this.meta, id)) unlockBits.push('起始强化');
+    if (hasTintSkin(this.meta, id)) unlockBits.push('金皮肤');
+    const unlockLabel = this.add
+      .text(0, 70, unlockBits.length > 0 ? unlockBits.join(' · ') : '未解锁局外加成', {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '11px',
+        color: unlockBits.length > 0 ? '#ffe66d' : '#6f82a6',
+      })
+      .setOrigin(0.5);
     const tip = this.add
-      .text(0, 88, `按 ${hotkey} 选择`, {
+      .text(0, 92, `按 ${hotkey} 选择`, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '11px',
         color: '#6f82a6',
@@ -174,7 +190,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       if (this.selected !== id) hit.setFillStyle(0x1a2744, 0.95);
     });
 
-    root.add([hit, keyBadge, portrait, name, title, tip]);
+    root.add([hit, keyBadge, portrait, name, title, unlockLabel, tip]);
     root.setData('id', id);
     root.setData('bg', hit);
     return root;
@@ -195,8 +211,14 @@ export class CharacterSelectScene extends Phaser.Scene {
         bg.setFillStyle(0x1a2744, 0.95);
       }
     }
+    const boost = hasStarterBoost(this.meta, id)
+      ? '已解锁起始武器强化（开局更强）'
+      : '存活≥2分钟 / 击杀40 / 胜利 → 解锁起始强化';
+    const tint = hasTintSkin(this.meta, id)
+      ? '已解锁金色皮肤'
+      : '胜利该角色 → 解锁金色皮肤';
     this.detailText.setText(
-      `${hero.description}\n生命 ${hero.maxHp} · 移速 ${hero.speed} · 伤害 ${hero.damage} · 主武器 ${weaponLabel(hero.primaryWeapon)}`,
+      `${hero.description}\n生命 ${hero.maxHp} · 移速 ${hero.speed} · 伤害 ${hero.damage} · 主武器 ${weaponLabel(hero.primaryWeapon)}\n${boost} · ${tint}`,
     );
   }
 }

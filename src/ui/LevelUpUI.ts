@@ -70,6 +70,11 @@ export class LevelUpUI {
     return this.open;
   }
 
+  /** Force-close if the run ends mid level-up. */
+  dismiss(): void {
+    this.close();
+  }
+
   queueLevels(
     levels: number,
     stacks: Record<UpgradeId, number>,

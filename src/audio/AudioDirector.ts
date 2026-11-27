@@ -144,6 +144,29 @@ export class AudioDirector {
     this.scene.sound.play('sfx_ui', { volume: 0.28, rate: 1 });
   }
 
+  playMilestone(id: string): void {
+    if (!this.unlocked || !this.scene) return;
+    if (id === 'boss_warning' || id === 'boss_arrive') {
+      this.scene.sound.play('sfx_kill_boss', {
+        volume: id === 'boss_arrive' ? 0.4 : 0.28,
+        rate: id === 'boss_arrive' ? 0.75 : 1.1,
+      });
+      // Force high combat layer punch for boss events.
+      this.intensityBand = Math.max(this.intensityBand, 1);
+      this.currentCombatVols[2] = Math.min(
+        COMBAT_MASTER,
+        (this.currentCombatVols[2] ?? 0) + (id === 'boss_arrive' ? 0.28 : 0.14),
+      );
+      return;
+    }
+    if (id === 'chest_wave') {
+      this.scene.sound.play('sfx_ui', { volume: 0.32, rate: 1.4 });
+      this.scene.sound.play('sfx_kill', { volume: 0.22, rate: 1.3 });
+      return;
+    }
+    this.scene.sound.play('sfx_kill_elite', { volume: 0.3, rate: 1.05 });
+  }
+
   playKill(kind?: EnemyKind): void {
     if (!this.unlocked || !this.scene) return;
     this.recentKills = Math.min(30, this.recentKills + 1);

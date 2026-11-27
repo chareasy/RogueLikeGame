@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { audioDirector } from '../audio/AudioDirector';
 import { ASSET_KEYS } from '../config/assets';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { loadMeta } from '../config/meta';
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -42,11 +43,27 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    const meta = loadMeta();
+    this.add
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 + 4,
+        `局外进度  场次 ${meta.runs} · 胜场 ${meta.wins} · 最高击杀 ${meta.bestKills} · 强化 ${meta.starterBoosts.length}/4 · 皮肤 ${meta.tintSkins.length}/4`,
+        {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '13px',
+          color: '#ffe66d',
+          stroke: '#0b1020',
+          strokeThickness: 3,
+        },
+      )
+      .setOrigin(0.5);
+
     const btn = this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, 220, 52, 0x4fd1c5, 1)
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 58, 220, 52, 0x4fd1c5, 1)
       .setInteractive({ useHandCursor: true });
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, '选择角色', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 58, '选择角色', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '20px',
         color: '#0b1020',

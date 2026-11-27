@@ -78,6 +78,30 @@ export class PlayerStats {
       def.auraRadius > 0;
   }
 
+  /** Light meta unlock: stronger opening kit for a cleared character. */
+  applyStarterBoost(def: CharacterDef): void {
+    switch (def.primaryWeapon) {
+      case 'bolt':
+        this.pierce += 1;
+        this.damage *= 1.12;
+        break;
+      case 'orbit':
+        this.hasOrbit = true;
+        this.orbitCount = Math.max(this.orbitCount, 3) + 1;
+        this.orbitRadius *= 1.08;
+        break;
+      case 'scatter':
+        this.projectileCount += 1;
+        this.critChance = Math.min(0.5, this.critChance + 0.05);
+        break;
+      case 'aura':
+        this.hasAura = true;
+        this.auraRadius = Math.max(this.auraRadius, 70) * 1.12;
+        this.auraDamage = Math.max(this.auraDamage, 8) * 1.15;
+        break;
+    }
+  }
+
   rollCritMultiplier(): number {
     return Math.random() < this.critChance ? 2 : 1;
   }

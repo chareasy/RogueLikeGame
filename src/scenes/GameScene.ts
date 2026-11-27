@@ -12,16 +12,20 @@ import {
   MATCH_DURATION_MS,
   PLAYER,
 } from '../config/constants';
+import { recordRun } from '../config/meta';
 import type { EnemyKind } from '../config/enemies';
 import { Player } from '../entities/Player';
+import { ArenaMap } from '../systems/ArenaMap';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EnemySystem } from '../systems/EnemySystem';
 import { FeedbackFX } from '../systems/FeedbackFX';
+import { MilestoneDirector } from '../systems/MilestoneDirector';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { XpPool } from '../systems/XpPool';
 import { Hud } from '../ui/Hud';
 import { LevelUpUI } from '../ui/LevelUpUI';
 import { ResultUI } from '../ui/ResultUI';
+import { VirtualJoystick } from '../ui/VirtualJoystick';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -30,6 +34,9 @@ export class GameScene extends Phaser.Scene {
   private xpPool!: XpPool;
   private combat!: CombatSystem;
   private fx!: FeedbackFX;
+  private arena!: ArenaMap;
+  private milestones!: MilestoneDirector;
+  private joystick!: VirtualJoystick;
   private hud!: Hud;
   private levelUpUI!: LevelUpUI;
   private resultUI!: ResultUI;
@@ -56,13 +63,17 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor(COLORS.bg);
     this.drawArena();
+    this.arena = new ArenaMap(this);
 
     this.player = new Player(this, character);
+    this.player.setArena(this.arena);
     this.enemies = new EnemySystem(this);
     this.weapons = new WeaponSystem(this);
     this.xpPool = new XpPool(this);
     this.combat = new CombatSystem();
     this.fx = new FeedbackFX(this);
+    this.milestones = new MilestoneDirector(this);
+    this.joystick = new VirtualJoystick(this);
     this.hud = new Hud(this, character.name);
     this.levelUpUI = new LevelUpUI(this);
     this.resultUI = new ResultUI(this);
@@ -107,6 +118,8 @@ export class GameScene extends Phaser.Scene {
     if (this.ended) return;
 
     const time = this.time.now;
+    this.joystick.enabled = !this.levelUpUI.isOpen;
+    this.joystick.setVisible(!this.levelUpUI.isOpen);
 
     if (this.levelUpUI.isOpen) {
       this.hud.update(
@@ -119,9 +132,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.elapsedMs += delta;
+    const stick = this.joystick.vector;
+    this.player.setStick(stick.x, stick.y);
     this.player.update(time, delta);
+    this.arena.update(time, delta, this.player);
     this.enemies.update(time, delta, this.elapsedMs, this.player);
+    for (const enemy of this.enemies.enemies) {
+      if (enemy.active) this.arena.resolveEnemy(enemy);
+    }
     this.weapons.update(time, delta, this.player, this.enemies.enemies);
+    this.milestones.update(this.elapsedMs, this.enemies, this.player, this.xpPool);
 
     this.combat.resolvePlayerProjectiles(
       time,
@@ -224,14 +244,26 @@ export class GameScene extends Phaser.Scene {
   private finish(won: boolean): void {
     if (this.ended) return;
     this.ended = true;
+    this.levelUpUI.dismiss();
     this.hud.setVisible(false);
+    this.joystick.setVisible(false);
     audioDirector.playMenu();
+
+    const unlock = recordRun({
+      characterId: this.player.character.id,
+      won,
+      kills: this.combat.kills,
+      elapsedMs: this.elapsedMs,
+      level: this.player.stats.level,
+    });
+
     this.resultUI.show(
       won,
       this.combat.kills,
       this.player.stats.level,
       this.elapsedMs,
       this.player.character.name,
+      unlock,
     );
   }
 }

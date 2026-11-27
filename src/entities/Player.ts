@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import type { CharacterDef } from '../config/characters';
 import { ARENA_HALF, PLAYER } from '../config/constants';
+import { hasTintSkin, loadMeta } from '../config/meta';
+import type { ArenaMap } from '../systems/ArenaMap';
 import { PlayerStats } from './PlayerStats';
 
 export class Player {
@@ -16,13 +18,25 @@ export class Player {
     left: Phaser.Input.Keyboard.Key;
     right: Phaser.Input.Keyboard.Key;
   };
+  private stickX = 0;
+  private stickY = 0;
+  private arena: ArenaMap | null = null;
 
   constructor(private readonly scene: Phaser.Scene, character: CharacterDef) {
     this.character = character;
     this.stats.applyCharacter(character);
+    const meta = loadMeta();
+    if (meta.starterBoosts.includes(character.id)) {
+      this.stats.applyStarterBoost(character);
+    }
+
     this.sprite = scene.add.image(0, 0, character.assetKey);
     this.sprite.setDepth(10);
     this.sprite.setDisplaySize(PLAYER.radius * 2.4, PLAYER.radius * 2.4);
+    if (hasTintSkin(meta, character.id)) {
+      // Alt "skin": warm gold wash to show unlock.
+      this.sprite.setTint(0xffe0a3);
+    }
 
     const keyboard = scene.input.keyboard!;
     this.cursors = keyboard.createCursorKeys();
@@ -32,6 +46,16 @@ export class Player {
       left: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
       right: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
+  }
+
+  setArena(arena: ArenaMap): void {
+    this.arena = arena;
+  }
+
+  /** Feed virtual joystick / external move vector (-1..1). */
+  setStick(x: number, y: number): void {
+    this.stickX = x;
+    this.stickY = y;
   }
 
   get x(): number {
@@ -45,8 +69,8 @@ export class Player {
   update(time: number, delta: number): void {
     this.stats.tickRegen(delta);
 
-    let dx = 0;
-    let dy = 0;
+    let dx = this.stickX;
+    let dy = this.stickY;
     if (this.cursors.left.isDown || this.wasd.left.isDown) dx -= 1;
     if (this.cursors.right.isDown || this.wasd.right.isDown) dx += 1;
     if (this.cursors.up.isDown || this.wasd.up.isDown) dy -= 1;
@@ -57,16 +81,17 @@ export class Player {
       dx /= len;
       dy /= len;
       const dist = (this.stats.speed * delta) / 1000;
-      this.sprite.x = Phaser.Math.Clamp(
-        this.sprite.x + dx * dist,
-        -ARENA_HALF + this.radius,
-        ARENA_HALF - this.radius,
-      );
-      this.sprite.y = Phaser.Math.Clamp(
-        this.sprite.y + dy * dist,
-        -ARENA_HALF + this.radius,
-        ARENA_HALF - this.radius,
-      );
+      let nx = this.sprite.x + dx * dist;
+      let ny = this.sprite.y + dy * dist;
+      nx = Phaser.Math.Clamp(nx, -ARENA_HALF + this.radius, ARENA_HALF - this.radius);
+      ny = Phaser.Math.Clamp(ny, -ARENA_HALF + this.radius, ARENA_HALF - this.radius);
+      if (this.arena) {
+        const resolved = this.arena.resolveRocks(nx, ny, this.radius);
+        nx = resolved.x;
+        ny = resolved.y;
+      }
+      this.sprite.x = nx;
+      this.sprite.y = ny;
       this.sprite.setFlipX(dx < 0);
     }
 
@@ -76,7 +101,12 @@ export class Player {
 
   tryHurt(amount: number, time: number): boolean {
     if (time < this.invulnUntil) return false;
-    this.stats.hp = Math.max(0, this.stats.hp - amount);
+    // Safe zone softens contact / poison hits.
+    let dmg = amount;
+    if (this.arena?.isInSafe(this.x, this.y, time)) {
+      dmg = Math.max(1, Math.floor(amount * 0.35));
+    }
+    this.stats.hp = Math.max(0, this.stats.hp - dmg);
     this.invulnUntil = time + PLAYER.invulnMs;
     this.scene.cameras.main.shake(80, 0.004);
     return true;

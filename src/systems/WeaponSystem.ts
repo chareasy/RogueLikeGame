@@ -86,7 +86,19 @@ export class WeaponSystem {
     if (!target) return;
 
     this.nextShotAt = time + player.stats.cooldownMs;
-    const baseAngle = Math.atan2(target.y - player.y, target.x - player.x);
+    // Mouse micro-assist: blend aim slightly toward pointer world position.
+    let aimX = target.x;
+    let aimY = target.y;
+    const pointer = this.scene.input.activePointer;
+    if (pointer && (pointer.isDown || pointer.x > 0)) {
+      const world = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      const toMouse = Phaser.Math.Distance.Between(player.x, player.y, world.x, world.y);
+      if (toMouse > 40 && toMouse < 520) {
+        aimX = target.x * 0.65 + world.x * 0.35;
+        aimY = target.y * 0.65 + world.y * 0.35;
+      }
+    }
+    const baseAngle = Math.atan2(aimY - player.y, aimX - player.x);
     const count = player.stats.projectileCount;
     const spreadDeg = player.stats.hasScatter
       ? WEAPON.spreadDeg * 1.85
