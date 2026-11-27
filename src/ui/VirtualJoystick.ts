@@ -41,9 +41,11 @@ export class VirtualJoystick {
       .setDepth(121);
 
     // Desktop: hide entirely so WASD / mouse aim stay primary.
+    // Also disable hit area — a leftover interactive disc can look like a "stick".
     if (!this.touchMode) {
-      this.base.setVisible(false).setAlpha(0);
-      this.thumb.setVisible(false).setAlpha(0);
+      this.base.disableInteractive();
+      this.base.setVisible(false).setAlpha(0).setActive(false);
+      this.thumb.setVisible(false).setAlpha(0).setActive(false);
       this.enabled = false;
     } else {
       this.base.setAlpha(0.55);
@@ -116,12 +118,14 @@ export class VirtualJoystick {
     this.forceVisible = forced;
     if (forced) {
       this.enabled = true;
-      this.base.setAlpha(0.5).setVisible(true);
-      this.thumb.setAlpha(0.7).setVisible(true);
+      this.base.setActive(true).setVisible(true).setAlpha(0.5);
+      this.base.setInteractive();
+      this.thumb.setActive(true).setVisible(true).setAlpha(0.7);
     } else if (!this.touchMode) {
       this.enabled = false;
-      this.base.setVisible(false);
-      this.thumb.setVisible(false);
+      this.base.disableInteractive();
+      this.base.setVisible(false).setActive(false);
+      this.thumb.setVisible(false).setActive(false);
       this.dx = 0;
       this.dy = 0;
     }
@@ -129,8 +133,9 @@ export class VirtualJoystick {
 
   setVisible(visible: boolean): void {
     if (!this.stickAllowed()) {
-      this.base.setVisible(false);
-      this.thumb.setVisible(false);
+      this.base.disableInteractive();
+      this.base.setVisible(false).setActive(false);
+      this.thumb.setVisible(false).setActive(false);
       return;
     }
     this.base.setVisible(visible);

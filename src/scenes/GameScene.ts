@@ -94,6 +94,8 @@ export class GameScene extends Phaser.Scene {
     this.milestones = new MilestoneDirector(this);
     this.milestones.setArena(this.arena);
     this.joystick = new VirtualJoystick(this);
+    // Belt-and-suspenders: never leave a desktop stick disc visible.
+    if (!this.joystick.touchMode) this.joystick.setVisible(false);
     this.hud = new Hud(this, character.name, !this.joystick.touchMode);
     this.levelUpUI = new LevelUpUI(this);
     this.levelUpUI.onOpen = () => {
@@ -271,6 +273,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setStick(stick.x, stick.y);
     this.player.update(time, delta);
     this.arena.update(time, delta, this.player, this.elapsedMs);
+    this.updateSafeArrow(time);
     this.enemies.update(time, delta, this.elapsedMs, this.player);
     for (const enemy of this.enemies.enemies) {
       if (enemy.active) this.arena.resolveEnemy(enemy);
@@ -371,6 +374,29 @@ export class GameScene extends Phaser.Scene {
     const boss = this.enemies.getBoss();
     if (!boss) return null;
     return { hp: boss.hp, maxHp: boss.maxHp, phase: boss.bossPhase };
+  }
+
+  /** Edge arrow when the active safe zone is far from the player. */
+  private updateSafeArrow(time: number): void {
+    const safe = this.arena.getActiveSafe(time);
+    if (!safe) {
+      this.hud.setSafeArrow(false);
+      return;
+    }
+    const dx = safe.x - this.player.x;
+    const dy = safe.y - this.player.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    // Keep cue off while the zone is still in local combat space.
+    if (dist < 360) {
+      this.hud.setSafeArrow(false);
+      return;
+    }
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const screenX = Phaser.Math.Clamp(GAME_WIDTH / 2 + nx * 200, 48, GAME_WIDTH - 48);
+    const screenY = Phaser.Math.Clamp(GAME_HEIGHT / 2 + ny * 140, 96, GAME_HEIGHT - 48);
+    const remainSec = Math.max(0, Math.ceil((safe.activeUntil - time) / 1000));
+    this.hud.setSafeArrow(true, screenX, screenY, `安全区 ${remainSec}s →`);
   }
 
   private pulseMagnet(time: number): void {

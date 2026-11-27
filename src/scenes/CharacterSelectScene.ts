@@ -183,17 +183,25 @@ export class CharacterSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const title = this.add
-      .text(0, 58, hero.title, {
+      .text(0, 54, hero.title, {
         fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
         fontSize: '12px',
         color: '#9fb0d0',
       })
       .setOrigin(0.5);
 
+    const weapon = this.add
+      .text(0, 72, weaponLabel(hero.primaryWeapon), {
+        fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
+        fontSize: '11px',
+        color: hero.accent,
+      })
+      .setOrigin(0.5);
+
     // One status line on the card; unlock details live in the panel below.
     const status = cardStatusLine(this.meta, id);
     const statusLabel = this.add
-      .text(0, 84, status.text, {
+      .text(0, 90, status.text, {
         fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
         fontSize: '12px',
         color: status.color,
@@ -208,7 +216,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       if (this.selected !== id) hit.setFillStyle(0x1a2744, 0.95);
     });
 
-    root.add([hit, keyBadge, portrait, name, title, statusLabel]);
+    root.add([hit, keyBadge, portrait, name, title, weapon, statusLabel]);
     root.setData('id', id);
     root.setData('bg', hit);
     root.setData('portrait', portrait);

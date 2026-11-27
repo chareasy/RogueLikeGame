@@ -34,6 +34,8 @@ export class Player {
   private stickX = 0;
   private stickY = 0;
   private arena: ArenaMap | null = null;
+  /** Persistent ring so the player stays readable in dense crowds. */
+  private readonly outline: Phaser.GameObjects.Arc;
 
   constructor(private readonly scene: Phaser.Scene, character: CharacterDef) {
     this.character = character;
@@ -42,6 +44,12 @@ export class Player {
     if (meta.starterBoosts.includes(character.id)) {
       this.stats.applyStarterBoost(character);
     }
+
+    const accent = Phaser.Display.Color.HexStringToColor(character.accent).color;
+    this.outline = scene.add
+      .circle(0, 0, PLAYER.radius + 6, accent, 0.18)
+      .setStrokeStyle(2, accent, 0.85)
+      .setDepth(9);
 
     this.sprite = scene.add.image(0, 0, character.assetKey);
     this.sprite.setDepth(10);
@@ -108,9 +116,12 @@ export class Player {
       this.sprite.setFlipX(dx < 0);
     }
 
+    this.outline.setPosition(this.sprite.x, this.sprite.y);
+
     const flashing = time < this.invulnUntil;
     // Keep silhouette readable — never fade into a ghost ring.
     this.sprite.setAlpha(flashing ? 0.72 + 0.28 * Math.sin(time / 40) : 1);
+    this.outline.setAlpha(flashing ? 0.35 : 0.85);
   }
 
   grantInvuln(time: number, ms: number): void {
@@ -137,6 +148,7 @@ export class Player {
   }
 
   destroy(): void {
+    this.outline.destroy();
     this.sprite.destroy();
   }
 }

@@ -124,8 +124,9 @@ export class MilestoneDirector {
   private beginCountdown(event: MilestoneEvent): void {
     this.clearCountdown();
     this.countdownEvent = event;
+    // Sit below the match timer / boss HP band to avoid HUD stacking.
     const root = this.scene.add
-      .container(GAME_WIDTH / 2, 52)
+      .container(GAME_WIDTH / 2, 78)
       .setScrollFactor(0)
       .setDepth(148);
     const bg = this.scene.add
@@ -222,6 +223,7 @@ export class MilestoneDirector {
       this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 22_000);
     } else if (event.id === 'boss_arrive') {
       // Banner + extra safe refuge for the learnable phase loop.
+      this.clearCountdown();
       this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 12_000);
     }
   }

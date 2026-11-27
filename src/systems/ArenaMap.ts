@@ -134,7 +134,7 @@ export class ArenaMap {
         .setAlpha(0.35);
       this.poisons.push({ x, y, radius: r, label });
     }
-    this.redrawPoisons(0, 0);
+    this.redrawPoisons(0, 0, false);
 
     // Safe zones are milestone-driven (no silent random pulse).
     const safeSpots: Array<[number, number, number]> = [
@@ -180,9 +180,31 @@ export class ArenaMap {
     }
   }
 
+  private placeSafeNear(
+    safe: SafeZone,
+    nearX: number,
+    nearY: number,
+    preferDist = 210,
+  ): void {
+    const ang = Math.random() * Math.PI * 2;
+    const dist = preferDist + (Math.random() - 0.5) * 40;
+    safe.x = Phaser.Math.Clamp(
+      nearX + Math.cos(ang) * dist,
+      -ARENA_HALF + safe.radius + 20,
+      ARENA_HALF - safe.radius - 20,
+    );
+    safe.y = Phaser.Math.Clamp(
+      nearY + Math.sin(ang) * dist,
+      -ARENA_HALF + safe.radius + 20,
+      ARENA_HALF - safe.radius - 20,
+    );
+    safe.graphic.setPosition(safe.x, safe.y);
+    safe.icon.setPosition(safe.x, safe.y - 8);
+    safe.label.setPosition(safe.x, safe.y + 16);
+  }
+
   /**
-   * Activate the safest nearby zone (or closest) for a climax beat.
-   * Returns the chosen zone center for banners.
+   * Activate a zone near the player for a climax beat (always discoverable).
    */
   activateSafeForEvent(
     time: number,
@@ -192,16 +214,16 @@ export class ArenaMap {
   ): { x: number; y: number } | null {
     if (this.safes.length === 0) return null;
     let best = this.safes[0]!;
-    let bestDist = Number.POSITIVE_INFINITY;
+    let bestScore = Number.POSITIVE_INFINITY;
     for (const safe of this.safes) {
-      // Prefer inactive zones near the player.
-      const dist = Phaser.Math.Distance.Between(nearX, nearY, safe.x, safe.y);
-      const busy = time < safe.activeUntil ? 400 : 0;
-      if (dist + busy < bestDist) {
-        bestDist = dist + busy;
+      const busy = time < safe.activeUntil ? 800 : 0;
+      if (busy < bestScore) {
+        bestScore = busy;
         best = safe;
       }
     }
+    // Relocate next to the player so the refuge is never a distant mystery.
+    this.placeSafeNear(best, nearX, nearY, 200);
     best.activeUntil = time + durationMs;
     best.graphic.setVisible(true);
     best.icon.setVisible(true);
@@ -218,18 +240,17 @@ export class ArenaMap {
     return { x: best.x, y: best.y };
   }
 
-  /** Brief telegraph before a safe zone opens. */
+  /** Brief telegraph before a safe zone opens — also snaps near the player. */
   telegraphSafe(nearX: number, nearY: number, delayMs: number): void {
     if (this.safes.length === 0) return;
     let best = this.safes[0]!;
-    let bestDist = Number.POSITIVE_INFINITY;
     for (const safe of this.safes) {
-      const dist = Phaser.Math.Distance.Between(nearX, nearY, safe.x, safe.y);
-      if (dist < bestDist) {
-        bestDist = dist;
+      if (safe.activeUntil <= 0) {
         best = safe;
+        break;
       }
     }
+    this.placeSafeNear(best, nearX, nearY, 220);
     best.graphic.setVisible(true);
     best.graphic.setAlpha(0.08);
     best.label.setVisible(true);
@@ -243,23 +264,35 @@ export class ArenaMap {
     });
   }
 
-  private redrawPoisons(time: number, elapsedMs: number): void {
+  /** Active safe zone, if any. */
+  getActiveSafe(time: number): SafeZone | null {
+    for (const s of this.safes) {
+      if (time < s.activeUntil) return s;
+    }
+    return null;
+  }
+
+  private redrawPoisons(time: number, elapsedMs: number, highlight = false): void {
     this.poisonGfx.clear();
-    // First ~75s: quieter rings so hazards don't own the opening shot.
-    const early = elapsedMs < 75_000;
-    const fillA = early ? 0.1 : 0.22;
-    const innerA = early ? 0.14 : 0.3;
-    const strokeA = early ? 0.35 : 0.7 + Math.sin(time / 200) * 0.15;
+    // Quiet by default; only punch contrast when the player is standing in one.
+    const early = elapsedMs < 90_000;
+    const fillA = highlight ? 0.28 : early ? 0.07 : 0.12;
+    const innerA = highlight ? 0.34 : early ? 0.1 : 0.16;
+    const strokeA = highlight
+      ? 0.85 + Math.sin(time / 180) * 0.1
+      : early
+        ? 0.22
+        : 0.4;
     for (const p of this.poisons) {
       this.poisonGfx.fillStyle(0x5a3d8b, fillA);
       this.poisonGfx.fillCircle(p.x, p.y, p.radius);
       this.poisonGfx.fillStyle(0x6fb84a, innerA);
       this.poisonGfx.fillCircle(p.x, p.y, p.radius * 0.72);
-      this.poisonGfx.lineStyle(early ? 2 : 3, 0xc8ff6a, strokeA);
+      this.poisonGfx.lineStyle(highlight ? 3 : 2, 0xc8ff6a, strokeA);
       this.poisonGfx.strokeCircle(p.x, p.y, p.radius);
-      this.poisonGfx.lineStyle(2, 0x9b59b6, early ? 0.28 : 0.55);
+      this.poisonGfx.lineStyle(2, 0x9b59b6, highlight ? 0.55 : early ? 0.18 : 0.3);
       this.poisonGfx.strokeCircle(p.x, p.y, p.radius * 0.72);
-      p.label.setAlpha(early ? 0.35 : 0.85);
+      p.label.setAlpha(highlight ? 0.9 : early ? 0.22 : 0.4);
     }
   }
 
@@ -303,14 +336,21 @@ export class ArenaMap {
   }
 
   update(time: number, delta: number, player: Player, elapsedMs = 0): void {
-    this.redrawPoisons(time, elapsedMs);
+    const standingInPoison = this.poisons.some(
+      (p) =>
+        Phaser.Math.Distance.Between(player.x, player.y, p.x, p.y) <=
+        p.radius + player.radius,
+    );
+    this.redrawPoisons(time, elapsedMs, standingInPoison);
 
     this.bubbleAcc += delta;
-    // Fewer bubbles early so the field stays readable.
-    const bubbleEvery = elapsedMs < 75_000 ? 520 : 220;
+    // Fewer bubbles unless the player is in poison (then more readable).
+    const bubbleEvery = standingInPoison ? 180 : elapsedMs < 90_000 ? 640 : 320;
     if (this.bubbleAcc >= bubbleEvery) {
       this.bubbleAcc = 0;
-      for (const p of this.poisons) this.spawnBubble(p.x, p.y, p.radius);
+      if (standingInPoison) {
+        for (const p of this.poisons) this.spawnBubble(p.x, p.y, p.radius);
+      }
     }
 
     // Safe zones only stay visible while an event keeps them active.
