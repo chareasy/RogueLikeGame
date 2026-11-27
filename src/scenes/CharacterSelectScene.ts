@@ -212,8 +212,8 @@ export class CharacterSelectScene extends Phaser.Scene {
         0,
         70,
         unlockBits.length > 0
-          ? unlockBits.join(' · ')
-          : `可用 · 起始强化未解锁（${Math.floor(BOOST_SURVIVE_MS / 60000)}分/${BOOST_KILL_TARGET}杀）`,
+          ? `可选用 · ${unlockBits.join(' · ')}`
+          : `可选用 · 起始强化未解锁（存活${Math.floor(BOOST_SURVIVE_MS / 60000)}分 / ${BOOST_KILL_TARGET}杀 / 胜）`,
         {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '11px',
@@ -281,13 +281,13 @@ export class CharacterSelectScene extends Phaser.Scene {
       }
     }
     const boost = hasStarterBoost(this.meta, id)
-      ? '已解锁起始武器强化（开局更强）'
-      : '角色可用 · 存活≥2分钟 / 击杀40 / 胜利 → 解锁起始强化';
+      ? '起始强化：已解锁（开局武器更强）'
+      : '起始强化：未解锁（存活≥2分钟 / 击杀40 / 胜利）';
     const tint = hasTintSkin(this.meta, id)
-      ? '已解锁金色皮肤'
-      : '胜利该角色 → 解锁金色皮肤';
+      ? '金色皮肤：已解锁'
+      : '金色皮肤：未解锁（需胜利该角色）';
     this.detailText.setText(
-      `${hero.description}\n生命 ${hero.maxHp} · 移速 ${hero.speed} · 伤害 ${hero.damage} · 主武器 ${weaponLabel(hero.primaryWeapon)}\n${boost} · ${tint}`,
+      `${hero.description}\n生命 ${hero.maxHp} · 移速 ${hero.speed} · 伤害 ${hero.damage} · 主武器 ${weaponLabel(hero.primaryWeapon)}\n该角色始终可选用\n${boost}\n${tint}`,
     );
   }
 }

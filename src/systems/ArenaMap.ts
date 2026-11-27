@@ -35,6 +35,61 @@ export class ArenaMap {
     this.layout();
   }
 
+  /** Irregular boulder silhouette — never reads as a joystick disc. */
+  private drawBoulder(x: number, y: number, r: number): void {
+    const g = this.scene.add.graphics().setDepth(2);
+    const seed = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453);
+    const lobes = 5 + Math.floor(seed % 3);
+    const pts: Array<{ ox: number; oy: number }> = [];
+    for (let i = 0; i < lobes; i += 1) {
+      const a = (i / lobes) * Math.PI * 2 + seed * 0.4;
+      const jitter = 0.72 + ((seed * (i + 3)) % 1) * 0.38;
+      pts.push({ ox: Math.cos(a) * r * jitter, oy: Math.sin(a) * r * jitter * 0.88 });
+    }
+    // Contact shadow under the mass.
+    this.scene.add
+      .ellipse(x + 6, y + r * 0.62, r * 1.85, r * 0.62, 0x000000, 0.38)
+      .setDepth(1);
+
+    g.fillStyle(0x3d4658, 1);
+    g.lineStyle(3, 0x1a1f2e, 1);
+    g.beginPath();
+    g.moveTo(x + pts[0]!.ox, y + pts[0]!.oy);
+    for (let i = 1; i < pts.length; i += 1) {
+      g.lineTo(x + pts[i]!.ox, y + pts[i]!.oy);
+    }
+    g.closePath();
+    g.fillPath();
+    g.strokePath();
+
+    // Lighter top facet.
+    g.fillStyle(0x6d7a90, 0.55);
+    g.beginPath();
+    g.moveTo(x - r * 0.35, y - r * 0.45);
+    g.lineTo(x + r * 0.1, y - r * 0.55);
+    g.lineTo(x + r * 0.05, y - r * 0.15);
+    g.lineTo(x - r * 0.4, y - r * 0.1);
+    g.closePath();
+    g.fillPath();
+
+    // Crack lines.
+    g.lineStyle(2, 0x2a3140, 0.85);
+    g.beginPath();
+    g.moveTo(x - r * 0.15, y - r * 0.2);
+    g.lineTo(x + r * 0.05, y + r * 0.15);
+    g.lineTo(x + r * 0.28, y + r * 0.05);
+    g.strokePath();
+    g.beginPath();
+    g.moveTo(x + r * 0.05, y + r * 0.15);
+    g.lineTo(x - r * 0.2, y + r * 0.35);
+    g.strokePath();
+
+    // Moss speck.
+    g.fillStyle(0x4a6b52, 0.55);
+    g.fillCircle(x + r * 0.22, y + r * 0.18, r * 0.1);
+    g.fillCircle(x - r * 0.3, y + r * 0.05, r * 0.07);
+  }
+
   private layout(): void {
     const rockSpots: Array<[number, number, number]> = [
       [-420, -280, 48],
@@ -50,16 +105,7 @@ export class ArenaMap {
     ];
     for (const [x, y, r] of rockSpots) {
       this.rocks.push({ x, y, radius: r });
-      // Ground shadow for "solid" read.
-      this.scene.add
-        .ellipse(x + 4, y + r * 0.55, r * 1.7, r * 0.7, 0x000000, 0.35)
-        .setDepth(1);
-      const rock = this.scene.add.circle(x, y, r, 0x4a5568, 1).setDepth(2);
-      rock.setStrokeStyle(4, 0x1a1f2e, 1);
-      this.scene.add.circle(x - r * 0.28, y - r * 0.32, r * 0.32, 0x8a96aa, 0.45).setDepth(2);
-      // Cracks / moss dots — reads as rock, not a control widget.
-      this.scene.add.circle(x + r * 0.2, y + r * 0.1, r * 0.12, 0x2d3545, 0.7).setDepth(2);
-      this.scene.add.circle(x - r * 0.05, y + r * 0.25, r * 0.08, 0x3a4658, 0.65).setDepth(2);
+      this.drawBoulder(x, y, r);
     }
 
     const poisonSpots: Array<[number, number, number]> = [
