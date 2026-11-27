@@ -26,6 +26,13 @@ export interface CharacterDef {
   auraDamage: number;
   critChance: number;
   accent: string;
+  /**
+   * Spawn pressure multiplier. Melee kits <1 (softer early piles),
+   * high clear kits >1 (fill empty fields faster).
+   */
+  spawnPressure: number;
+  /** Contact damage taken multiplier (melee kits get relief early via GameScene). */
+  contactTakenMul: number;
 }
 
 export const CHARACTERS: CharacterDef[] = [
@@ -51,6 +58,8 @@ export const CHARACTERS: CharacterDef[] = [
     auraDamage: 0,
     critChance: 0.05,
     accent: '#4fd1c5',
+    spawnPressure: 0.82,
+    contactTakenMul: 0.85,
   },
   {
     id: 'mage',
@@ -75,6 +84,8 @@ export const CHARACTERS: CharacterDef[] = [
     auraDamage: 0,
     critChance: 0.08,
     accent: '#b388ff',
+    spawnPressure: 1.22,
+    contactTakenMul: 1.05,
   },
   {
     id: 'ranger',
@@ -98,6 +109,8 @@ export const CHARACTERS: CharacterDef[] = [
     auraDamage: 0,
     critChance: 0.12,
     accent: '#7cf29c',
+    spawnPressure: 1.12,
+    contactTakenMul: 1,
   },
   {
     id: 'berserker',
@@ -123,6 +136,8 @@ export const CHARACTERS: CharacterDef[] = [
     auraDamage: 5,
     critChance: 0.1,
     accent: '#ff6b6b',
+    spawnPressure: 0.9,
+    contactTakenMul: 0.9,
   },
 ];
 

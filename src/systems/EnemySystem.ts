@@ -102,7 +102,8 @@ export class EnemySystem {
 
   /** Raise spawn pressure when the field is too empty (e.g. strong mage clear). */
   setDensityBias(bias: number): void {
-    this.densityBias = Phaser.Math.Clamp(bias, 0.75, 1.55);
+    // Wider band so role spawnPressure + early openMul can actually bite.
+    this.densityBias = Phaser.Math.Clamp(bias, 0.55, 1.7);
   }
 
   update(time: number, delta: number, elapsedMs: number, player: Player): void {

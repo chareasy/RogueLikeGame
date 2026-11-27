@@ -147,10 +147,11 @@ const AFFINITY: Record<CharacterId, Partial<Record<UpgradeId, number>>> = {
 
 /** Core kit cards — early level-ups bias hard toward these. */
 const CORE: Record<CharacterId, UpgradeId[]> = {
-  knight: ['damage', 'pierce', 'firerate', 'maxhp'],
+  // Regen early so melee kits aren't all glass until minute 2.
+  knight: ['damage', 'pierce', 'firerate', 'maxhp', 'regen'],
   mage: ['orbit', 'area', 'damage', 'pierce'],
   ranger: ['count', 'firerate', 'movespeed', 'crit'],
-  berserker: ['aura', 'area', 'damage', 'maxhp'],
+  berserker: ['aura', 'area', 'damage', 'maxhp', 'regen'],
 };
 
 export function isPreferredUpgrade(

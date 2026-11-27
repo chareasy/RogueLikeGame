@@ -182,6 +182,11 @@ export class AudioDirector {
     this.scene.sound.play('sfx_kill_elite', { volume: 0.3, rate: 1.05 });
   }
 
+  playHurt(): void {
+    if (!this.unlocked || !this.scene || this.muted) return;
+    this.scene.sound.play('sfx_ui', { volume: 0.34, rate: 0.55 });
+  }
+
   playKill(kind?: EnemyKind): void {
     if (!this.unlocked || !this.scene || this.muted) return;
     this.recentKills = Math.min(30, this.recentKills + 1);

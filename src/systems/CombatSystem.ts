@@ -69,6 +69,7 @@ export class CombatSystem {
     time: number,
     player: Player,
     enemies: Enemy[],
+    damageScale = 1,
   ): void {
     for (const enemy of enemies) {
       if (!enemy.active) continue;
@@ -81,8 +82,15 @@ export class CombatSystem {
       );
       if (dist <= player.radius + enemy.radius) {
         const cause = time < enemy.dashUntil ? 'charge' : 'contact';
-        if (player.tryHurt(enemy.damage, time, cause)) {
+        const dmg = Math.max(1, Math.floor(enemy.damage * damageScale));
+        if (player.tryHurt(dmg, time, cause)) {
           enemy.nextTouchAt = time + enemy.touchCooldownMs;
+          // Soft shove so piles don't stick on top of the player.
+          const nx = (player.x - enemy.x) / (dist || 1);
+          const ny = (player.y - enemy.y) / (dist || 1);
+          enemy.x -= nx * 10;
+          enemy.y -= ny * 10;
+          enemy.body.setPosition(enemy.x, enemy.y);
         }
       }
     }

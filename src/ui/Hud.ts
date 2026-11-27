@@ -224,6 +224,33 @@ export class Hud {
     void this.desktopHint;
   }
 
+  /** Brief shake when the player takes damage. */
+  pulseHurt(): void {
+    const scene = this.root.scene;
+    const barX = 16;
+    const textX = 20;
+    this.hpBarFg.x = barX;
+    this.hpBarBg.x = barX;
+    this.hpText.x = textX;
+    scene.tweens.killTweensOf([this.hpBarFg, this.hpBarBg, this.hpText]);
+    scene.tweens.add({
+      targets: [this.hpBarFg, this.hpBarBg],
+      x: barX + 7,
+      duration: 45,
+      yoyo: true,
+      repeat: 3,
+      ease: 'Sine.easeInOut',
+    });
+    scene.tweens.add({
+      targets: this.hpText,
+      x: textX + 7,
+      duration: 45,
+      yoyo: true,
+      repeat: 3,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
   setVisible(visible: boolean): void {
     this.root.setVisible(visible);
   }

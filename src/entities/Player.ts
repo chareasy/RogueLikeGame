@@ -127,9 +127,13 @@ export class Player {
     this.stats.hp = Math.max(0, this.stats.hp - dmg);
     this.lastHurtCause = cause;
     this.invulnUntil = time + PLAYER.invulnMs;
-    this.scene.cameras.main.shake(110, 0.006);
+    this.scene.cameras.main.shake(140, 0.008);
     // Edge flash so hits are readable even in dense packs.
-    this.scene.cameras.main.flash(90, 180, 30, 40);
+    this.scene.cameras.main.flash(110, 220, 40, 40);
+    this.sprite.setTintFill(0xff6b6b);
+    this.scene.time.delayedCall(90, () => {
+      if (this.sprite.active) this.sprite.clearTint();
+    });
     return true;
   }
 

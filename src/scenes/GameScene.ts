@@ -53,6 +53,9 @@ export class GameScene extends Phaser.Scene {
   private magnetUntil = 0;
   private metaSnapshot = loadMeta();
   private keyHandlers: Array<() => void> = [];
+  private lastHp = 0;
+  private combatVignette!: Phaser.GameObjects.Image;
+  private hurtFlash!: Phaser.GameObjects.Rectangle;
 
   constructor() {
     super('GameScene');
@@ -81,6 +84,7 @@ export class GameScene extends Phaser.Scene {
 
     this.player = new Player(this, character);
     this.player.setArena(this.arena);
+    this.lastHp = this.player.stats.hp;
     this.enemies = new EnemySystem(this);
     this.weapons = new WeaponSystem(this);
     this.xpPool = new XpPool(this);
@@ -93,10 +97,14 @@ export class GameScene extends Phaser.Scene {
     this.hud = new Hud(this, character.name, !this.joystick.touchMode);
     this.levelUpUI = new LevelUpUI(this);
     this.levelUpUI.onOpen = () => {
-      this.player.grantInvuln(this.time.now, 2500);
+      const now = this.time.now;
+      // Long cover while picking; shove packs so close doesn't resume on top of you.
+      this.player.grantInvuln(now, 4200);
+      this.shoveEnemiesFromPlayer(150);
     };
     this.levelUpUI.onClose = () => {
-      this.player.grantInvuln(this.time.now, 900);
+      this.player.grantInvuln(this.time.now, 1400);
+      this.shoveEnemiesFromPlayer(90);
     };
     this.resultUI = new ResultUI(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -106,20 +114,26 @@ export class GameScene extends Phaser.Scene {
     this.pauseUI.muted = audioDirector.isMuted;
 
     // Soft cinematic vignette (screen-space).
-    const vignette = this.add
+    this.combatVignette = this.add
       .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'ui_combat_vignette')
       .setDisplaySize(GAME_WIDTH * 1.05, GAME_HEIGHT * 1.05)
       .setScrollFactor(0)
       .setDepth(90)
       .setAlpha(0.35);
     this.tweens.add({
-      targets: vignette,
+      targets: this.combatVignette,
       alpha: { from: 0.22, to: 0.4 },
       duration: 2400,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
+    // Red edge overlay for hit feedback (normally invisible).
+    this.hurtFlash = this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xff2a2a, 0)
+      .setScrollFactor(0)
+      .setDepth(91)
+      .setBlendMode(Phaser.BlendModes.ADD);
 
     this.cameras.main.startFollow(this.player.sprite, true, 0.12, 0.12);
     this.cameras.main.setBounds(
@@ -129,14 +143,66 @@ export class GameScene extends Phaser.Scene {
       ARENA_SIZE + 80,
     );
 
-    for (let i = 0; i < 5; i += 1) {
+    // Melee kits open with fewer surrounds; clear kits keep a fuller pack.
+    const openChasers = character.spawnPressure < 1 ? 3 : 5;
+    const openSwarm = character.spawnPressure < 1 ? 1 : 2;
+    for (let i = 0; i < openChasers; i += 1) {
       this.enemies.spawnKind('chaser', 0, 0, 300 + i * 40);
     }
-    for (let i = 0; i < 2; i += 1) {
+    for (let i = 0; i < openSwarm; i += 1) {
       this.enemies.spawnKind('swarm', 0, 0, 360 + i * 32);
     }
 
     this.bindPauseKeys();
+  }
+
+  /** Push enemies outward so level-up / recovery doesn't resume inside a pile. */
+  private shoveEnemiesFromPlayer(radius: number): void {
+    const px = this.player.x;
+    const py = this.player.y;
+    for (const enemy of this.enemies.enemies) {
+      if (!enemy.active) continue;
+      const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
+      if (dist >= radius || dist < 1) continue;
+      const nx = (enemy.x - px) / dist;
+      const ny = (enemy.y - py) / dist;
+      const push = radius - dist + 24;
+      enemy.x += nx * push;
+      enemy.y += ny * push;
+      enemy.body.setPosition(enemy.x, enemy.y);
+    }
+  }
+
+  private pulseHurtFeedback(): void {
+    audioDirector.playHurt();
+    this.hud.pulseHurt();
+    this.tweens.killTweensOf(this.hurtFlash);
+    this.hurtFlash.setAlpha(0.42);
+    this.tweens.add({
+      targets: this.hurtFlash,
+      alpha: 0,
+      duration: 280,
+      ease: 'Quad.easeOut',
+    });
+    this.tweens.killTweensOf(this.combatVignette);
+    this.combatVignette.setTint(0xff6060);
+    this.tweens.add({
+      targets: this.combatVignette,
+      alpha: 0.72,
+      duration: 90,
+      yoyo: true,
+      onComplete: () => {
+        this.combatVignette.clearTint();
+        this.tweens.add({
+          targets: this.combatVignette,
+          alpha: { from: 0.22, to: 0.4 },
+          duration: 2400,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+      },
+    });
   }
 
   private bindPauseKeys(): void {
@@ -248,16 +314,33 @@ export class GameScene extends Phaser.Scene {
     this.flushSkillKills(this.weapons.pendingOrbitKills);
     this.flushSkillKills(this.weapons.pendingAuraKills);
 
-    this.combat.resolveEnemyContact(time, this.player, this.enemies.enemies);
+    // Early contact soften + melee kit relief; fades in after opening minute.
+    const charMul = this.player.character.contactTakenMul;
+    let earlyMul = 1;
+    if (this.elapsedMs < 45_000) earlyMul = 0.55;
+    else if (this.elapsedMs < 90_000) earlyMul = 0.75;
+    const contactScale = charMul * earlyMul;
+    this.combat.resolveEnemyContact(
+      time,
+      this.player,
+      this.enemies.enemies,
+      contactScale,
+    );
     this.combat.resolveEnemyBullets(time, this.player, this.enemies.bullets);
 
-    // Soft pressure when strong clear leaves the field empty.
+    // Soft pressure when strong clear leaves the field empty,
+    // scaled by role spawnPressure (melee <1, mage/ranger >1).
     const alive = this.enemies.aliveCount;
     let bias = 1;
     if (alive < 8) bias = 1.35;
     else if (alive < 16) bias = 1.15;
     else if (alive > 55) bias = 0.85;
-    this.enemies.setDensityBias(bias);
+    // Opening window: further ease for melee / amplify for clear kits.
+    let openMul = 1;
+    if (this.elapsedMs < 75_000) {
+      openMul = this.player.character.spawnPressure < 1 ? 0.78 : 1.05;
+    }
+    this.enemies.setDensityBias(bias * this.player.character.spawnPressure * openMul);
 
     const magnetBoost = time < this.magnetUntil;
     const gained = this.combat.collectXp(
@@ -278,6 +361,11 @@ export class GameScene extends Phaser.Scene {
         );
       }
     }
+
+    if (this.player.stats.hp < this.lastHp) {
+      this.pulseHurtFeedback();
+    }
+    this.lastHp = this.player.stats.hp;
 
     audioDirector.setCombatThreat({
       elapsedMs: this.elapsedMs,
@@ -303,15 +391,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   private maybeDropHeal(time: number): void {
-    // Early sustain packs — rarer after the opening minute.
-    const chance = this.elapsedMs < 90_000 ? 0.1 : 0.035;
+    // Early sustain packs — melee kits get more; rarer after the opening minute.
+    const melee = this.player.character.spawnPressure < 1;
+    let chance = this.elapsedMs < 90_000 ? 0.12 : 0.035;
+    if (melee && this.elapsedMs < 90_000) chance = 0.18;
     if (Math.random() > chance) return;
     const ang = Math.random() * Math.PI * 2;
     const d = 20 + Math.random() * 50;
+    const amount =
+      this.elapsedMs < 60_000 ? (melee ? 28 : 22) : melee ? 18 : 16;
     this.healthPool.spawn(
       this.player.x + Math.cos(ang) * d,
       this.player.y + Math.sin(ang) * d,
-      this.elapsedMs < 60_000 ? 22 : 16,
+      amount,
     );
     void time;
   }
