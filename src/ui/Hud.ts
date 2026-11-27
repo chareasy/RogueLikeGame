@@ -2,8 +2,6 @@ import Phaser from 'phaser';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH, MATCH_DURATION_MS } from '../config/constants';
 import type { BoostProgress } from '../config/meta';
 import type { PlayerStats } from '../entities/PlayerStats';
-import { UiMotion } from './UiMotion';
-
 function formatTime(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const m = Math.floor(total / 60);
@@ -26,8 +24,6 @@ export class Hud {
   private readonly hpBarFg: Phaser.GameObjects.Rectangle;
   private readonly characterName: string;
   private readonly desktopHint: boolean;
-  private lastKills = -1;
-  private lastLevel = -1;
   private targetHpWidth = 180;
   private targetXpWidth = 0;
   private targetMetaWidth = 0;
@@ -94,16 +90,8 @@ export class Hud {
         fontSize: '12px',
         color: '#9fb0d0',
       })
-      .setOrigin(0.5, 1);
-
-    // Decorative animated XP orb near kill counter.
-    UiMotion.ensureAnims(scene);
-    const orb = scene.add
-      .sprite(GAME_WIDTH - 28, 42, 'ui_xp_orb_sheet', 0)
-      .setScrollFactor(0)
-      .setScale(0.55)
-      .setAlpha(0.8)
-      .play('ui_xp_orb');
+      .setOrigin(0.5, 1)
+      .setAlpha(0.7);
 
     this.root.add([
       this.hpBarBg,
@@ -118,27 +106,10 @@ export class Hud {
       this.timeText,
       this.killText,
       hint,
-      orb,
     ]);
 
-    // Entrance slide.
-    this.root.setAlpha(0);
-    this.root.y = -12;
-    scene.tweens.add({
-      targets: this.root,
-      alpha: 1,
-      y: 0,
-      duration: 420,
-      ease: 'Cubic.easeOut',
-    });
-
-    scene.tweens.add({
-      targets: hint,
-      alpha: 0.45,
-      duration: 1200,
-      yoyo: true,
-      repeat: -1,
-    });
+    // Static HUD — no entrance bounce / pulsing chrome in combat.
+    this.root.setAlpha(1);
 
     if (desktopHint) {
       this.showMouseAimTip(scene);
@@ -146,25 +117,26 @@ export class Hud {
   }
 
   private showMouseAimTip(scene: Phaser.Scene): void {
+    // Corner tip only — never covers the player / combat center.
     const tip = scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 120, '提示：移动鼠标可微调自动瞄准方向', {
+      .text(GAME_WIDTH - 14, GAME_HEIGHT - 36, '鼠标可微调瞄准', {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '15px',
-        color: '#7eeae0',
-        backgroundColor: '#0b1020cc',
-        padding: { x: 12, y: 8 },
+        fontSize: '12px',
+        color: '#9fb0d0',
+        backgroundColor: '#0b1020aa',
+        padding: { x: 8, y: 4 },
       })
-      .setOrigin(0.5)
+      .setOrigin(1, 1)
       .setScrollFactor(0)
       .setDepth(130)
       .setAlpha(0);
 
     scene.tweens.add({
       targets: tip,
-      alpha: 1,
-      delay: 1800,
-      duration: 320,
-      hold: 2600,
+      alpha: 0.9,
+      delay: 600,
+      duration: 200,
+      hold: 1600,
       yoyo: true,
       onComplete: () => tip.destroy(),
     });
@@ -184,15 +156,6 @@ export class Hud {
     this.hpText.setText(`${Math.ceil(stats.hp)} / ${stats.maxHp}`);
     this.levelText.setText(`${this.characterName} · Lv.${stats.level}`);
     this.killText.setText(`击杀 ${kills} · 场上 ${enemyCount}`);
-
-    if (kills !== this.lastKills && this.lastKills >= 0) {
-      UiMotion.popScale(this.root.scene, this.killText, 1.18);
-    }
-    if (stats.level !== this.lastLevel && this.lastLevel >= 0) {
-      UiMotion.popScale(this.root.scene, this.levelText, 1.16);
-    }
-    this.lastKills = kills;
-    this.lastLevel = stats.level;
 
     const hpRatio = Phaser.Math.Clamp(stats.hp / stats.maxHp, 0, 1);
     this.targetHpWidth = 180 * hpRatio;
@@ -224,30 +187,22 @@ export class Hud {
     void this.desktopHint;
   }
 
-  /** Brief shake when the player takes damage. */
+  /** Brief HP bar flash when the player takes damage (no position jitter). */
   pulseHurt(): void {
     const scene = this.root.scene;
-    const barX = 16;
-    const textX = 20;
-    this.hpBarFg.x = barX;
-    this.hpBarBg.x = barX;
-    this.hpText.x = textX;
-    scene.tweens.killTweensOf([this.hpBarFg, this.hpBarBg, this.hpText]);
+    scene.tweens.killTweensOf(this.hpBarFg);
+    this.hpBarFg.setFillStyle(0xff6b6b, 1);
     scene.tweens.add({
-      targets: [this.hpBarFg, this.hpBarBg],
-      x: barX + 7,
-      duration: 45,
+      targets: this.hpBarFg,
+      alpha: { from: 1, to: 0.55 },
+      duration: 80,
       yoyo: true,
-      repeat: 3,
-      ease: 'Sine.easeInOut',
-    });
-    scene.tweens.add({
-      targets: this.hpText,
-      x: textX + 7,
-      duration: 45,
-      yoyo: true,
-      repeat: 3,
-      ease: 'Sine.easeInOut',
+      repeat: 1,
+      onComplete: () => {
+        const low = this.hpBarFg.width < 54;
+        this.hpBarFg.setFillStyle(low ? 0xff6b6b : 0x4fd1c5, 1);
+        this.hpBarFg.setAlpha(1);
+      },
     });
   }
 

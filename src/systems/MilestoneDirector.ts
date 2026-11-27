@@ -60,6 +60,8 @@ export class MilestoneDirector {
   private countdownBar?: Phaser.GameObjects.Rectangle;
   private countdownBarBg?: Phaser.GameObjects.Rectangle;
   private countdownEvent: MilestoneEvent | null = null;
+  /** When true, hide banners/countdowns so they never cover level-up / pause. */
+  private uiMuted = false;
 
   private arena: ArenaMap | null = null;
 
@@ -67,6 +69,18 @@ export class MilestoneDirector {
 
   setArena(arena: ArenaMap): void {
     this.arena = arena;
+  }
+
+  /** Mute climax chrome while a blocking modal (level-up / pause) owns the screen. */
+  setUiMuted(muted: boolean): void {
+    this.uiMuted = muted;
+    if (muted) {
+      this.banner?.setVisible(false);
+      this.countdownRoot?.setVisible(false);
+    } else {
+      this.banner?.setVisible(true);
+      this.countdownRoot?.setVisible(true);
+    }
   }
 
   update(
@@ -86,7 +100,7 @@ export class MilestoneDirector {
       ) {
         this.warnStarted.add(event.id);
         this.beginCountdown(event);
-        this.scene.cameras.main.flash(120, 255, 200, 80);
+        // No camera flash on warn — keeps combat readable.
         audioDirector.playUi();
         // Safe-zone telegraph tied to climax beats.
         if (
@@ -136,6 +150,7 @@ export class MilestoneDirector {
       })
       .setOrigin(0.5);
     root.add([bg, title, barBg, bar, text]);
+    root.setVisible(!this.uiMuted);
     this.countdownRoot = root;
     this.countdownText = text;
     this.countdownBar = bar;
@@ -155,10 +170,8 @@ export class MilestoneDirector {
     const secs = (remain / 1000).toFixed(1);
     this.countdownText?.setText(`${secs}s`);
     this.countdownBar?.setScale(ratio, 1);
-    // Edge pulse when under 2s.
-    if (remain < 2000) {
-      this.countdownRoot.setAlpha(0.65 + Math.sin(elapsedMs / 60) * 0.35);
-    }
+    // Steady alpha — no edge flicker under pressure.
+    this.countdownRoot.setAlpha(this.uiMuted ? 0 : 1);
     void this.countdownBarBg;
   }
 
@@ -192,7 +205,6 @@ export class MilestoneDirector {
       for (let i = 0; i < 4; i += 1) {
         enemies.spawnKind('charger', player.x, player.y, 260 + i * 30);
       }
-      this.scene.cameras.main.flash(180, 255, 120, 60);
     } else if (event.id === 'chest_wave') {
       this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 14_000);
       for (let i = 0; i < 28; i += 1) {
@@ -209,18 +221,17 @@ export class MilestoneDirector {
       for (let i = 0; i < 14; i += 1) {
         enemies.spawnKind('swarm', player.x, player.y, 220 + i * 18);
       }
-      this.scene.cameras.main.flash(160, 120, 255, 160);
     } else if (event.id === 'boss_warning') {
       this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 20_000);
-      this.scene.cameras.main.shake(200, 0.003);
     } else if (event.id === 'boss_arrive') {
-      this.scene.cameras.main.flash(320, 255, 40, 40);
-      this.scene.cameras.main.shake(280, 0.006);
+      // Banner text only — no screen flash/shake over the fight.
     }
   }
 
   private showBanner(title: string, detail: string): void {
     this.banner?.destroy(true);
+    // Don't spawn climax banners over blocking modals.
+    if (this.uiMuted) return;
     const { width } = this.scene.scale;
     const root = this.scene.add.container(width / 2, 90).setScrollFactor(0).setDepth(150);
     const bg = this.scene.add
@@ -242,16 +253,15 @@ export class MilestoneDirector {
       })
       .setOrigin(0.5);
     root.add([bg, t, d]);
-    root.setAlpha(0);
-    this.scene.tweens.add({
-      targets: root,
-      alpha: 1,
-      y: 110,
-      duration: 280,
-      ease: 'Cubic.easeOut',
-      hold: 2200,
-      yoyo: true,
-      onComplete: () => root.destroy(true),
+    root.setAlpha(1);
+    // Short hold, no bounce — announce then clear.
+    this.scene.time.delayedCall(1800, () => {
+      if (this.banner === root) {
+        root.destroy(true);
+        this.banner = undefined;
+      } else {
+        root.destroy(true);
+      }
     });
     this.banner = root;
   }

@@ -54,7 +54,6 @@ export class GameScene extends Phaser.Scene {
   private metaSnapshot = loadMeta();
   private keyHandlers: Array<() => void> = [];
   private lastHp = 0;
-  private combatVignette!: Phaser.GameObjects.Image;
   private hurtFlash!: Phaser.GameObjects.Rectangle;
 
   constructor() {
@@ -101,10 +100,13 @@ export class GameScene extends Phaser.Scene {
       // Long cover while picking; shove packs so close doesn't resume on top of you.
       this.player.grantInvuln(now, 4200);
       this.shoveEnemiesFromPlayer(150);
+      // Hide climax chrome so banners never cover upgrade cards.
+      this.milestones.setUiMuted(true);
     };
     this.levelUpUI.onClose = () => {
       this.player.grantInvuln(this.time.now, 1400);
       this.shoveEnemiesFromPlayer(90);
+      this.milestones.setUiMuted(false);
     };
     this.resultUI = new ResultUI(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -113,21 +115,13 @@ export class GameScene extends Phaser.Scene {
     this.pauseUI = new PauseUI(this, this.joystick.touchMode);
     this.pauseUI.muted = audioDirector.isMuted;
 
-    // Soft cinematic vignette (screen-space).
-    this.combatVignette = this.add
+    // Static vignette — no breathing pulse during combat.
+    this.add
       .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'ui_combat_vignette')
       .setDisplaySize(GAME_WIDTH * 1.05, GAME_HEIGHT * 1.05)
       .setScrollFactor(0)
       .setDepth(90)
-      .setAlpha(0.35);
-    this.tweens.add({
-      targets: this.combatVignette,
-      alpha: { from: 0.22, to: 0.4 },
-      duration: 2400,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+      .setAlpha(0.28);
     // Red edge overlay for hit feedback (normally invisible).
     this.hurtFlash = this.add
       .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xff2a2a, 0)
@@ -176,32 +170,14 @@ export class GameScene extends Phaser.Scene {
   private pulseHurtFeedback(): void {
     audioDirector.playHurt();
     this.hud.pulseHurt();
+    // Short red edge only — don't retint / re-pulse the whole vignette.
     this.tweens.killTweensOf(this.hurtFlash);
-    this.hurtFlash.setAlpha(0.42);
+    this.hurtFlash.setAlpha(0.32);
     this.tweens.add({
       targets: this.hurtFlash,
       alpha: 0,
-      duration: 280,
+      duration: 200,
       ease: 'Quad.easeOut',
-    });
-    this.tweens.killTweensOf(this.combatVignette);
-    this.combatVignette.setTint(0xff6060);
-    this.tweens.add({
-      targets: this.combatVignette,
-      alpha: 0.72,
-      duration: 90,
-      yoyo: true,
-      onComplete: () => {
-        this.combatVignette.clearTint();
-        this.tweens.add({
-          targets: this.combatVignette,
-          alpha: { from: 0.22, to: 0.4 },
-          duration: 2400,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
-      },
     });
   }
 
@@ -214,12 +190,13 @@ export class GameScene extends Phaser.Scene {
       this.keyHandlers.push(() => kb.off(`keydown-${key}`, handler));
     };
     const pauseHandlers = {
-      onResume: () => undefined,
+      onResume: () => this.milestones.setUiMuted(false),
       onStickChange: (forced: boolean) => this.joystick.setForceVisible(forced),
     };
     bind('ESC', () => {
       if (this.ended || this.levelUpUI.isOpen) return;
       this.pauseUI.toggle(pauseHandlers);
+      this.milestones.setUiMuted(this.pauseUI.isOpen);
       audioDirector.playUi();
     });
     bind('M', () => {

@@ -10,7 +10,6 @@ import type { CharacterId } from '../config/characters';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import { DEATH_CAUSE_LABEL, type DeathCause } from '../entities/Player';
 import { pinMany, pinToScreen } from './fixUi';
-import { UiMotion } from './UiMotion';
 
 export class ResultUI {
   private readonly root: Phaser.GameObjects.Container;
@@ -48,22 +47,13 @@ export class ResultUI {
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
-      .setScale(0.7)
       .setScrollFactor(0);
 
-    UiMotion.ensureAnims(this.scene);
     const emblem = this.scene.add
       .image(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 200, 'ui_energy_emblem')
       .setDisplaySize(56, 56)
       .setAlpha(0.85)
       .setScrollFactor(0);
-    this.scene.tweens.add({
-      targets: emblem,
-      angle: 360,
-      duration: 10000,
-      repeat: -1,
-      ease: 'Linear',
-    });
 
     const causeLine =
       !won && deathCause
@@ -164,22 +154,6 @@ export class ResultUI {
       .setOrigin(0.5)
       .setScrollFactor(0);
 
-    if (unlockBits.length > 0) {
-      const spark = this.scene.add
-        .sprite(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 48, 'ui_sparkle_sheet', 0)
-        .setScale(1.3)
-        .setScrollFactor(0)
-        .play('ui_sparkle');
-      this.root.add(spark);
-      this.scene.tweens.add({
-        targets: spark,
-        alpha: 0,
-        y: GAME_HEIGHT / 2 - 72,
-        duration: 900,
-        onComplete: () => spark.destroy(),
-      });
-    }
-
     const goSelect = () => {
       this.clearKeys();
       this.scene.scene.start('CharacterSelectScene');
@@ -227,8 +201,10 @@ export class ResultUI {
       .setOrigin(0.5)
       .setScrollFactor(0);
 
-    again.on('pointerover', () => UiMotion.popScale(this.scene, again));
-    retry.on('pointerover', () => UiMotion.popScale(this.scene, retry));
+    again.on('pointerover', () => again.setFillStyle(0x7eeae0, 1));
+    again.on('pointerout', () => again.setFillStyle(0x4fd1c5, 1));
+    retry.on('pointerover', () => retry.setFillStyle(0x2f4468, 1));
+    retry.on('pointerout', () => retry.setFillStyle(0x243556, 1));
     again.on('pointerdown', goSelect);
     retry.on('pointerdown', goRetry);
 
@@ -274,19 +250,8 @@ export class ResultUI {
     window.addEventListener('keydown', this.keyHandler);
     this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.clearKeys());
 
-    this.scene.tweens.add({
-      targets: this.root,
-      alpha: 1,
-      duration: 280,
-      ease: 'Cubic.easeOut',
-    });
-    this.scene.tweens.add({
-      targets: title,
-      scale: 1,
-      duration: 420,
-      ease: 'Back.easeOut',
-    });
-    UiMotion.pulseButton(this.scene, [again, againText]);
+    this.root.setAlpha(1);
+    title.setScale(1);
   }
 
   private buildProgressRow(
@@ -325,16 +290,6 @@ export class ResultUI {
       })
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
-
-    // Animate fill from empty.
-    fg.width = 4;
-    this.scene.tweens.add({
-      targets: fg,
-      width: Math.max(4, barW * clamped),
-      duration: 480,
-      ease: 'Cubic.easeOut',
-      delay: 120,
-    });
 
     return [name, bg, fg, value];
   }

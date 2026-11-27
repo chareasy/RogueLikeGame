@@ -10,8 +10,6 @@ import {
   hasTintSkin,
   loadMeta,
 } from '../config/meta';
-import { UiMotion } from '../ui/UiMotion';
-
 export class CharacterSelectScene extends Phaser.Scene {
   private selected: CharacterId = 'knight';
   private cards: Phaser.GameObjects.Container[] = [];
@@ -19,7 +17,6 @@ export class CharacterSelectScene extends Phaser.Scene {
   private keyHandlers: Array<() => void> = [];
   private meta = loadMeta();
   private startBtn!: Phaser.GameObjects.Rectangle;
-  private startLabel!: Phaser.GameObjects.Text;
 
   constructor() {
     super('CharacterSelectScene');
@@ -36,16 +33,14 @@ export class CharacterSelectScene extends Phaser.Scene {
     audioDirector.playMenu();
     this.cameras.main.setBackgroundColor(COLORS.bg);
     this.cameras.main.fadeIn(280, 11, 16, 32);
-    const bg = this.add
+    this.add
       .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, ASSET_KEYS.menuBg)
       .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
       .setAlpha(0.55);
-    UiMotion.kenBurns(this, bg);
     this.add
       .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050814, 0.55);
-    UiMotion.addAmbientField(this, 10);
 
-    const heading = this.add
+    this.add
       .text(GAME_WIDTH / 2, 22, '选择角色', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '28px',
@@ -53,21 +48,19 @@ export class CharacterSelectScene extends Phaser.Scene {
         fontStyle: 'bold',
       })
       .setOrigin(0.5, 0);
-    UiMotion.breatheTitle(this, heading);
 
-    const sub = this.add
+    this.add
       .text(GAME_WIDTH / 2, 56, '点击卡片 / 按 1–4 选择 · Enter / 空格确认出发', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '13px',
         color: '#9fb0d0',
       })
       .setOrigin(0.5, 0);
-    UiMotion.floatIn(this, sub, 12, 40);
 
     const boostUnlocked = this.meta.starterBoosts.length;
     const tintUnlocked = this.meta.tintSkins.length;
     const totalChars = CHARACTERS.length;
-    const progress = this.add
+    this.add
       .text(
         GAME_WIDTH / 2,
         78,
@@ -79,7 +72,6 @@ export class CharacterSelectScene extends Phaser.Scene {
         },
       )
       .setOrigin(0.5, 0);
-    UiMotion.floatIn(this, progress, 10, 80);
 
     const cardW = 200;
     const gap = 16;
@@ -89,7 +81,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       const card = this.createCard(hero.id, startX + index * (cardW + gap), 230, cardW, index + 1);
       this.cards.push(card);
     });
-    UiMotion.staggerIn(this, this.cards, 90, 48);
+    // Instant cards — no multi-second stagger that leaves the roster empty.
 
     this.detailText = this.add
       .text(GAME_WIDTH / 2, 380, '', {
@@ -105,7 +97,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       .rectangle(GAME_WIDTH / 2, 490, 240, 52, 0x4fd1c5, 1)
       .setInteractive({ useHandCursor: true })
       .setStrokeStyle(2, 0xb8fff4, 0.85);
-    this.startLabel = this.add
+    this.add
       .text(GAME_WIDTH / 2, 490, '确认出发', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '18px',
@@ -113,19 +105,16 @@ export class CharacterSelectScene extends Phaser.Scene {
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
-    UiMotion.pulseButton(this, [this.startBtn, this.startLabel]);
 
     const start = () => {
       audioDirector.unlock();
       audioDirector.playUi();
       this.registry.set('selectedCharacter', this.selected);
-      this.cameras.main.fadeOut(220, 11, 16, 32);
-      this.time.delayedCall(230, () => this.scene.start('GameScene'));
+      this.cameras.main.fadeOut(180, 11, 16, 32);
+      this.time.delayedCall(190, () => this.scene.start('GameScene'));
     };
     this.startBtn.on('pointerover', () => {
       this.startBtn.setFillStyle(0x7eeae0, 1);
-      UiMotion.popScale(this, this.startBtn);
-      UiMotion.popScale(this, this.startLabel);
     });
     this.startBtn.on('pointerout', () => this.startBtn.setFillStyle(0x4fd1c5, 1));
     this.startBtn.on('pointerdown', start);
@@ -232,23 +221,9 @@ export class CharacterSelectScene extends Phaser.Scene {
     hit.on('pointerdown', () => this.select(id));
     hit.on('pointerover', () => {
       if (this.selected !== id) hit.setFillStyle(0x243556, 1);
-      this.tweens.add({ targets: root, scale: 1.04, duration: 120, ease: 'Back.easeOut' });
     });
     hit.on('pointerout', () => {
       if (this.selected !== id) hit.setFillStyle(0x1a2744, 0.95);
-      if (this.selected !== id) {
-        this.tweens.add({ targets: root, scale: 1, duration: 120 });
-      }
-    });
-
-    // Idle portrait bob.
-    this.tweens.add({
-      targets: portrait,
-      y: portrait.y - 5,
-      duration: 1100 + hotkey * 90,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
     });
 
     root.add([hit, keyBadge, portrait, name, title, unlockLabel, tip]);
@@ -268,16 +243,11 @@ export class CharacterSelectScene extends Phaser.Scene {
       if (cardId === id) {
         bg.setStrokeStyle(3, Phaser.Display.Color.HexStringToColor(hero.accent).color, 1);
         bg.setFillStyle(0x243556, 1);
-        this.tweens.add({
-          targets: card,
-          scale: 1.06,
-          duration: 160,
-          ease: 'Back.easeOut',
-        });
+        card.setScale(1.04);
       } else {
         bg.setStrokeStyle(2, 0x3a4f73, 1);
         bg.setFillStyle(0x1a2744, 0.95);
-        this.tweens.add({ targets: card, scale: 1, duration: 140 });
+        card.setScale(1);
       }
     }
     const boost = hasStarterBoost(this.meta, id)

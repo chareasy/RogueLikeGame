@@ -57,10 +57,11 @@
         width: 180px;
         height: 180px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(79, 209, 197, 0.28), transparent 70%);
+        background: radial-gradient(circle, rgba(79, 209, 197, 0.14), transparent 70%);
         filter: blur(2px);
         pointer-events: none;
-        animation: drift 9s ease-in-out infinite;
+        /* Static glow — no drifting chrome around the game. */
+        opacity: 0.35;
         transition: opacity 280ms ease;
       }
       .orb.a {
@@ -72,17 +73,13 @@
         bottom: 10%;
         width: 220px;
         height: 220px;
-        background: radial-gradient(circle, rgba(255, 230, 109, 0.18), transparent 70%);
-        animation-duration: 11s;
-        animation-delay: -3s;
+        background: radial-gradient(circle, rgba(255, 230, 109, 0.1), transparent 70%);
       }
       .orb.c {
         left: 40%;
         bottom: 6%;
         width: 140px;
         height: 140px;
-        animation-duration: 7s;
-        animation-delay: -1.5s;
       }
       body.in-combat .orb,
       body.in-combat .motes,
@@ -102,32 +99,9 @@
           opacity: 0.9;
         }
       }
-      .motes {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background-image: url("assets/ui/fx_menu_motes.gif"), url("assets/ui/fx_sparkle.gif");
-        background-repeat: repeat, no-repeat;
-        background-size: 160px 160px, 72px 72px;
-        background-position:
-          0 0,
-          78% 18%;
-        opacity: 0.28;
-        animation: moteScroll 18s linear infinite;
-        mix-blend-mode: screen;
-        transition: opacity 280ms ease;
-      }
-      @keyframes moteScroll {
-        from {
-          background-position:
-            0 0,
-            78% 18%;
-        }
-        to {
-          background-position:
-            0 -220px,
-            76% 22%;
-        }
+      .motes,
+      .corner-gif {
+        display: none;
       }
       #app {
         position: relative;
