@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
+import type { CharacterId } from '../config/characters';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import {
+  isPreferredUpgrade,
   pickUpgradeChoices,
   type UpgradeDef,
   type UpgradeId,
@@ -15,6 +17,7 @@ export class LevelUpUI {
   private onPick: ((id: UpgradeId) => void) | null = null;
   private stacks: Record<UpgradeId, number> | null = null;
   private currentChoices: UpgradeDef[] = [];
+  private characterId: CharacterId = 'knight';
   private readonly keyHandler: (event: KeyboardEvent) => void;
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -40,9 +43,9 @@ export class LevelUpUI {
       .setOrigin(0.5);
 
     this.hint = scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 36, '按 1 / 2 / 3 选择，或点击卡片', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 36, '按 1 / 2 / 3 选择，或点击卡片 · 金色角标=适合当前角色', {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '14px',
+        fontSize: '13px',
         color: '#9fb0d0',
       })
       .setOrigin(0.5);
@@ -71,10 +74,12 @@ export class LevelUpUI {
     levels: number,
     stacks: Record<UpgradeId, number>,
     onPick: (id: UpgradeId) => void,
+    characterId: CharacterId = 'knight',
   ): void {
     this.pendingLevels += levels;
     this.stacks = stacks;
     this.onPick = onPick;
+    this.characterId = characterId;
     if (!this.open) this.showNext();
   }
 
@@ -88,7 +93,7 @@ export class LevelUpUI {
     this.open = true;
     this.root.setVisible(true);
 
-    this.currentChoices = pickUpgradeChoices(this.stacks, 3);
+    this.currentChoices = pickUpgradeChoices(this.stacks, 3, this.characterId);
     const startX = GAME_WIDTH / 2 - (this.currentChoices.length - 1) * 140;
     this.currentChoices.forEach((upgrade, index) => {
       const card = this.createCard(
@@ -108,34 +113,51 @@ export class LevelUpUI {
     y: number,
     hotkey: number,
   ): Phaser.GameObjects.Container {
+    const preferred = isPreferredUpgrade(this.characterId, upgrade.id);
     const card = this.scene.add.container(x, y);
     const bg = this.scene.add
-      .rectangle(0, 0, 240, 168, 0x1a2744, 0.95)
-      .setStrokeStyle(2, 0x4fd1c5, 0.9)
+      .rectangle(0, 0, 240, preferred ? 188 : 168, 0x1a2744, 0.95)
+      .setStrokeStyle(2, preferred ? 0xffe66d : 0x4fd1c5, preferred ? 1 : 0.9)
       .setInteractive({ useHandCursor: true });
 
     const keyBadge = this.scene.add
-      .text(-100, -66, String(hotkey), {
+      .text(-100, preferred ? -76 : -66, String(hotkey), {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '16px',
         color: '#0b1020',
-        backgroundColor: '#4fd1c5',
+        backgroundColor: preferred ? '#ffe66d' : '#4fd1c5',
         padding: { x: 8, y: 2 },
       })
       .setOrigin(0, 0);
 
+    const children: Phaser.GameObjects.GameObject[] = [bg, keyBadge];
+
+    if (preferred) {
+      const badge = this.scene.add
+        .text(0, -72, '适合当前角色', {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '12px',
+          color: '#0b1020',
+          backgroundColor: '#ffe66d',
+          padding: { x: 8, y: 3 },
+          fontStyle: 'bold',
+        })
+        .setOrigin(0.5);
+      children.push(badge);
+    }
+
     const title = this.scene.add
-      .text(0, -40, upgrade.title, {
+      .text(0, preferred ? -28 : -40, upgrade.title, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '20px',
-        color: '#4fd1c5',
+        color: preferred ? '#ffe66d' : '#4fd1c5',
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
 
     const stack = this.stacks?.[upgrade.id] ?? 0;
     const desc = this.scene.add
-      .text(0, 20, `${upgrade.description}\n当前层数 ${stack}/${upgrade.maxStacks}`, {
+      .text(0, preferred ? 28 : 20, `${upgrade.description}\n当前层数 ${stack}/${upgrade.maxStacks}`, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '14px',
         color: '#d7e2f7',
@@ -148,7 +170,8 @@ export class LevelUpUI {
     bg.on('pointerout', () => bg.setFillStyle(0x1a2744, 0.95));
     bg.on('pointerdown', () => this.choose(upgrade.id));
 
-    card.add([bg, keyBadge, title, desc]);
+    children.push(title, desc);
+    card.add(children);
     return card;
   }
 

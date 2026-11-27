@@ -118,7 +118,7 @@ export const CHARACTERS: CharacterDef[] = [
     pickupRadius: 92,
     orbitCount: 0,
     orbitRadius: 70,
-    auraRadius: 70,
+    auraRadius: 82,
     auraDamage: 8,
     critChance: 0.1,
     accent: '#ff6b6b',

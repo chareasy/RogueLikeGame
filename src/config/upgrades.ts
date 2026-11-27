@@ -1,3 +1,5 @@
+import type { CharacterId } from './characters';
+
 export type UpgradeId =
   | 'damage'
   | 'count'
@@ -94,12 +96,80 @@ export const UPGRADES: UpgradeDef[] = [
   },
 ];
 
+/** Higher weight = more likely for that character's build. */
+const AFFINITY: Record<CharacterId, Partial<Record<UpgradeId, number>>> = {
+  knight: {
+    damage: 3,
+    pierce: 2.5,
+    firerate: 2,
+    maxhp: 2.5,
+    regen: 2,
+    crit: 1.5,
+  },
+  mage: {
+    orbit: 4.5,
+    area: 3,
+    damage: 2.5,
+    pierce: 2,
+    magnet: 2,
+    crit: 2,
+  },
+  ranger: {
+    count: 4,
+    firerate: 3.5,
+    movespeed: 3.5,
+    crit: 3,
+    pierce: 2,
+    damage: 2,
+  },
+  berserker: {
+    aura: 4.5,
+    area: 3.5,
+    damage: 3,
+    maxhp: 2.5,
+    regen: 2.5,
+    crit: 2,
+  },
+};
+
+export function isPreferredUpgrade(
+  characterId: CharacterId,
+  upgradeId: UpgradeId,
+): boolean {
+  return (AFFINITY[characterId]?.[upgradeId] ?? 1) >= 2.5;
+}
+
 export function pickUpgradeChoices(
   stacks: Record<UpgradeId, number>,
   count = 3,
+  characterId: CharacterId = 'knight',
 ): UpgradeDef[] {
   const available = UPGRADES.filter((u) => stacks[u.id] < u.maxStacks);
   const pool = available.length > 0 ? available : UPGRADES;
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(count, shuffled.length));
+  const weights = AFFINITY[characterId] ?? {};
+
+  const picked: UpgradeDef[] = [];
+  const remaining = [...pool];
+
+  while (picked.length < Math.min(count, remaining.length)) {
+    let total = 0;
+    const weighted = remaining.map((u) => {
+      const w = weights[u.id] ?? 1;
+      total += w;
+      return { u, w };
+    });
+    let roll = Math.random() * total;
+    let chosenIdx = 0;
+    for (let i = 0; i < weighted.length; i += 1) {
+      roll -= weighted[i]!.w;
+      if (roll <= 0) {
+        chosenIdx = i;
+        break;
+      }
+    }
+    picked.push(remaining[chosenIdx]!);
+    remaining.splice(chosenIdx, 1);
+  }
+
+  return picked;
 }

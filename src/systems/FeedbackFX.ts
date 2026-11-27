@@ -4,12 +4,20 @@ import Phaser from 'phaser';
 export class FeedbackFX {
   constructor(private readonly scene: Phaser.Scene) {}
 
-  damageNumber(x: number, y: number, amount: number, crit = false): void {
+  damageNumber(
+    x: number,
+    y: number,
+    amount: number,
+    crit = false,
+    style: 'normal' | 'burn' = 'normal',
+  ): void {
+    const color =
+      style === 'burn' ? (crit ? '#ffd28a' : '#ff8a5c') : crit ? '#ffe66d' : '#ffffff';
     const text = this.scene.add
       .text(x, y - 8, `${Math.round(amount)}`, {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: crit ? '18px' : '14px',
-        color: crit ? '#ffe66d' : '#ffffff',
+        fontSize: crit ? '18px' : style === 'burn' ? '15px' : '14px',
+        color,
         fontStyle: 'bold',
         stroke: '#0b1020',
         strokeThickness: 3,
@@ -57,6 +65,32 @@ export class FeedbackFX {
       alpha: 0,
       duration: 280,
       onComplete: () => ring.destroy(),
+    });
+  }
+
+  /** Brief scatter fan telegraph at the muzzle. */
+  scatterFan(x: number, y: number, angle: number, spreadRad: number, count: number): void {
+    const fan = this.scene.add.graphics().setDepth(7);
+    fan.fillStyle(0x7cf29c, 0.18);
+    fan.beginPath();
+    fan.moveTo(x, y);
+    const steps = Math.max(6, count * 3);
+    const start = angle - spreadRad * ((count - 1) / 2);
+    const end = angle + spreadRad * ((count - 1) / 2);
+    const reach = 70;
+    for (let i = 0; i <= steps; i += 1) {
+      const a = start + ((end - start) * i) / steps;
+      fan.lineTo(x + Math.cos(a) * reach, y + Math.sin(a) * reach);
+    }
+    fan.closePath();
+    fan.fillPath();
+    fan.lineStyle(2, 0x9cffb8, 0.55);
+    fan.strokePath();
+    this.scene.tweens.add({
+      targets: fan,
+      alpha: 0,
+      duration: 180,
+      onComplete: () => fan.destroy(),
     });
   }
 }

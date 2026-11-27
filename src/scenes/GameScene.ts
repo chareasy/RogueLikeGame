@@ -156,6 +156,7 @@ export class GameScene extends Phaser.Scene {
           levels,
           this.player.stats.stacks,
           (id) => this.player.stats.applyUpgrade(id),
+          this.player.character.id,
         );
       }
     }
@@ -186,9 +187,9 @@ export class GameScene extends Phaser.Scene {
     const pending = this.weapons.pendingHits;
     while (pending.length > 0) {
       const hit = pending.pop()!;
-      this.fx.damageNumber(hit.x, hit.y - 10, hit.amount, hit.crit);
+      this.fx.damageNumber(hit.x, hit.y - 10, hit.amount, hit.crit, hit.style);
       if (hit.killed) this.fx.killBurst(hit.x, hit.y);
-      else this.fx.hitBurst(hit.x, hit.y);
+      else this.fx.hitBurst(hit.x, hit.y, hit.style === 'burn' ? 0xff8a5c : 0xffe66d);
     }
   }
 

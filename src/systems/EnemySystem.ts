@@ -108,6 +108,7 @@ export class EnemySystem {
       bullet.lifeMs -= delta;
       if (bullet.lifeMs <= 0) {
         bullet.active = false;
+        bullet.graphic.clearTint();
         bullet.graphic.setVisible(false);
         continue;
       }
@@ -120,6 +121,7 @@ export class EnemySystem {
         Math.abs(bullet.y) > ARENA_HALF + 40
       ) {
         bullet.active = false;
+        bullet.graphic.clearTint();
         bullet.graphic.setVisible(false);
       }
     }

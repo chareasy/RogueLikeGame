@@ -24,6 +24,7 @@ export class AudioDirector {
   private menuVol = 0;
   private targetMenuVol = 0;
   private intensity = 0;
+  private intensityBand = 0;
   private recentKills = 0;
   private killDecayAcc = 0;
 
@@ -63,6 +64,7 @@ export class AudioDirector {
   playCombat(): void {
     this.mode = 'combat';
     this.targetMenuVol = 0;
+    this.intensityBand = 0;
     this.ensurePlaying();
   }
 
@@ -94,6 +96,34 @@ export class AudioDirector {
     if (input.hasBoss) value += 0.28;
     this.intensity = Phaser.Math.Clamp(value, 0, 1);
     this.targetCombatVols = this.blendLayers(this.intensity);
+    this.cueIntensityBand();
+  }
+
+  /** Short audible stinger when combat layers step up (P1: BGM change must be felt). */
+  private cueIntensityBand(): void {
+    const band = this.intensity < 0.35 ? 0 : this.intensity < 0.65 ? 1 : 2;
+    if (band <= this.intensityBand) {
+      // Allow band to drop silently when threat falls.
+      this.intensityBand = band;
+      return;
+    }
+    const prev = this.intensityBand;
+    this.intensityBand = band;
+    if (!this.unlocked || !this.scene || prev < 0) return;
+    // Punch mid/high layer and play a short cue so the step is obvious.
+    if (band === 1) {
+      this.scene.sound.play('sfx_ui', { volume: 0.22, rate: 0.7 });
+      this.currentCombatVols[1] = Math.min(
+        COMBAT_MASTER,
+        (this.currentCombatVols[1] ?? 0) + 0.18,
+      );
+    } else if (band >= 2) {
+      this.scene.sound.play('sfx_kill_elite', { volume: 0.22, rate: 1.35 });
+      this.currentCombatVols[2] = Math.min(
+        COMBAT_MASTER,
+        (this.currentCombatVols[2] ?? 0) + 0.22,
+      );
+    }
   }
 
   private blendLayers(intensity: number): [number, number, number] {

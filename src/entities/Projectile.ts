@@ -31,6 +31,7 @@ export class Projectile {
     radius: number,
     pierce: number,
     lifeMs: number,
+    tint?: number,
   ): void {
     this.active = true;
     this.x = x;
@@ -46,6 +47,8 @@ export class Projectile {
     this.graphic.setDisplaySize(size, size);
     this.graphic.setRotation(Math.atan2(vy, vx));
     this.graphic.setPosition(x, y);
+    if (tint !== undefined) this.graphic.setTint(tint);
+    else this.graphic.clearTint();
     this.graphic.setVisible(true);
     this.graphic.setActive(true);
   }
@@ -64,6 +67,7 @@ export class Projectile {
 
   kill(): void {
     this.active = false;
+    this.graphic.clearTint();
     this.graphic.setVisible(false);
     this.graphic.setActive(false);
     this.hitIds.clear();

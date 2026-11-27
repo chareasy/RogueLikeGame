@@ -41,10 +41,16 @@ export class Enemy {
   dashUntil = 0;
   dashVx = 0;
   dashVy = 0;
+  /** Windup before dash completes. */
+  telegraphUntil = 0;
+  telegraphNx = 0;
+  telegraphNy = 0;
+  private readonly telegraphMs = 420;
 
   readonly body: Phaser.GameObjects.Image;
   readonly hpBarBg: Phaser.GameObjects.Rectangle;
   readonly hpBarFg: Phaser.GameObjects.Rectangle;
+  readonly warnGfx: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene) {
     this.body = scene.add.image(0, 0, ASSET_KEYS.enemies.chaser);
@@ -60,6 +66,9 @@ export class Enemy {
     this.hpBarFg.setDepth(7);
     this.hpBarFg.setOrigin(0, 0.5);
     this.hpBarBg.setOrigin(0.5, 0.5);
+
+    this.warnGfx = scene.add.graphics().setDepth(6);
+    this.warnGfx.setVisible(false);
   }
 
   spawn(kind: EnemyKind, x: number, y: number): void {
@@ -86,6 +95,7 @@ export class Enemy {
     this.nextShotAt = 0;
     this.nextDashAt = 0;
     this.dashUntil = 0;
+    this.telegraphUntil = 0;
     this.flashUntil = 0;
 
     this.body.setTexture(ASSET_KEYS.enemies[kind]);
@@ -97,13 +107,18 @@ export class Enemy {
     this.body.setActive(true);
     this.body.setAlpha(1);
 
+    this.warnGfx.clear();
+    this.warnGfx.setVisible(false);
+
     const showBar = kind === 'elite' || kind === 'boss' || kind === 'tank';
     this.hpBarBg.setVisible(showBar);
     this.hpBarFg.setVisible(showBar);
     if (showBar) {
-      const width = kind === 'boss' ? 80 : 36;
-      this.hpBarBg.setSize(width, 5);
-      this.hpBarFg.setSize(width, 5);
+      const width = kind === 'boss' ? 80 : kind === 'tank' ? 42 : 36;
+      this.hpBarBg.setSize(width, kind === 'tank' ? 6 : 5);
+      this.hpBarFg.setSize(width, kind === 'tank' ? 6 : 5);
+      if (kind === 'tank') this.hpBarFg.setFillStyle(0xffb347, 1);
+      else this.hpBarFg.setFillStyle(0x7cf29c, 1);
       this.syncHpBar();
     }
   }
@@ -124,7 +139,7 @@ export class Enemy {
   }
 
   private syncHpBar(): void {
-    const width = this.kind === 'boss' ? 80 : 36;
+    const width = this.kind === 'boss' ? 80 : this.kind === 'tank' ? 42 : 36;
     const ratio = Phaser.Math.Clamp(this.hp / this.maxHp, 0, 1);
     this.hpBarFg.width = width * ratio;
     this.hpBarBg.setPosition(this.x, this.y - this.radius - 12);
@@ -146,11 +161,34 @@ export class Enemy {
     const nx = dx / dist;
     const ny = dy / dist;
 
-    if (this.dashCooldownMs > 0 && time >= this.nextDashAt && dist < 360) {
+    // Charger windup telegraph before dash.
+    if (this.dashCooldownMs > 0 && this.telegraphUntil === 0 && time >= this.nextDashAt && dist < 360) {
+      this.telegraphUntil = time + this.telegraphMs;
+      this.telegraphNx = nx;
+      this.telegraphNy = ny;
       this.nextDashAt = time + this.dashCooldownMs;
+    }
+
+    if (this.telegraphUntil > 0 && time < this.telegraphUntil) {
+      this.drawTelegraph(time);
+      this.body.setTint(0xff5555);
+      // Slow crawl during windup so player can react.
+      this.x += (nx * this.speed * 0.25 * delta) / 1000;
+      this.y += (ny * this.speed * 0.25 * delta) / 1000;
+      this.body.setPosition(this.x, this.y);
+      if (this.kind === 'elite' || this.kind === 'boss' || this.kind === 'tank') {
+        this.syncHpBar();
+      }
+      return;
+    }
+
+    if (this.telegraphUntil > 0 && time >= this.telegraphUntil) {
+      this.telegraphUntil = 0;
+      this.warnGfx.clear();
+      this.warnGfx.setVisible(false);
       this.dashUntil = time + this.dashDurationMs;
-      this.dashVx = nx * this.dashSpeed;
-      this.dashVy = ny * this.dashSpeed;
+      this.dashVx = this.telegraphNx * this.dashSpeed;
+      this.dashVy = this.telegraphNy * this.dashSpeed;
     }
 
     let moveX = nx;
@@ -192,6 +230,23 @@ export class Enemy {
     }
   }
 
+  private drawTelegraph(time: number): void {
+    const pulse = 0.45 + Math.sin(time / 50) * 0.25;
+    const reach = 160;
+    this.warnGfx.setVisible(true);
+    this.warnGfx.clear();
+    this.warnGfx.lineStyle(3, 0xff4444, pulse);
+    this.warnGfx.beginPath();
+    this.warnGfx.moveTo(this.x, this.y);
+    this.warnGfx.lineTo(
+      this.x + this.telegraphNx * reach,
+      this.y + this.telegraphNy * reach,
+    );
+    this.warnGfx.strokePath();
+    this.warnGfx.fillStyle(0xff2222, pulse * 0.35);
+    this.warnGfx.fillCircle(this.x, this.y, this.radius + 6);
+  }
+
   private fireBullet(nx: number, ny: number, bullets: EnemyBullet[]): void {
     const bullet = bullets.find((b) => !b.active);
     if (!bullet) return;
@@ -201,10 +256,12 @@ export class Enemy {
     bullet.vx = nx * this.projectileSpeed;
     bullet.vy = ny * this.projectileSpeed;
     bullet.damage = this.projectileDamage;
-    bullet.radius = this.kind === 'boss' ? 8 : 5;
+    // Thicker, more readable shots for shooters / boss.
+    bullet.radius = this.kind === 'boss' ? 11 : 8;
     bullet.lifeMs = 2800;
-    const size = bullet.radius * 2.4;
+    const size = bullet.radius * 2.6;
     bullet.graphic.setDisplaySize(size, size);
+    bullet.graphic.setTint(this.kind === 'boss' ? 0xff6b6b : 0xff8a5c);
     bullet.graphic.setPosition(bullet.x, bullet.y);
     bullet.graphic.setRotation(Math.atan2(ny, nx));
     bullet.graphic.setVisible(true);
@@ -213,6 +270,9 @@ export class Enemy {
 
   kill(): void {
     this.active = false;
+    this.telegraphUntil = 0;
+    this.warnGfx.clear();
+    this.warnGfx.setVisible(false);
     this.body.clearTint();
     this.body.setVisible(false);
     this.body.setActive(false);
