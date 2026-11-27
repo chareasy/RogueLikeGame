@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+*.local
+.vite
+.playwright-mcp
+/menu-screen.png
+/gameplay-screen.png
+/*.webp
+/*.mp4
