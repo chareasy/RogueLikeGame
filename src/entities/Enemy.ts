@@ -76,6 +76,11 @@ export class Enemy {
   bossPhase = 1;
   phaseAnnounce = false;
   pendingHazards = 0;
+  /** Learnable attack cycle (windup → act → recover). */
+  nextAttackAt = 0;
+  attackWindupUntil = 0;
+  /** Summoner cast telegraph. */
+  summonWindupUntil = 0;
 
   readonly body: Phaser.GameObjects.Image;
   readonly hpBarBg: Phaser.GameObjects.Rectangle;
@@ -140,8 +145,11 @@ export class Enemy {
     this.pendingSummons = 0;
     this.pendingHazards = 0;
     this.bossPhase = 1;
-    this.phaseAnnounce = false;
+    this.phaseAnnounce = kind === 'boss';
     this.shieldFacing = 0;
+    this.nextAttackAt = 0;
+    this.attackWindupUntil = 0;
+    this.summonWindupUntil = 0;
 
     const texKind = def.textureKey ?? kind;
     this.body.setTexture(ASSET_KEYS.enemies[texKind]);
@@ -343,10 +351,23 @@ export class Enemy {
       this.fireBullet(nx, ny, bullets);
     }
 
-    if (this.behavior === 'summon' && this.summonCooldownMs > 0 && time >= this.nextSummonAt) {
-      this.nextSummonAt = time + this.summonCooldownMs;
-      this.pendingSummons += 3;
-      this.body.setTintFill(0xe0b0ff);
+    // Summoner: purple cast ring, then spawn burst (readable telegraph).
+    if (this.behavior === 'summon' && this.summonCooldownMs > 0) {
+      if (this.summonWindupUntil > 0) {
+        this.drawSummonCast(time);
+        if (time >= this.summonWindupUntil) {
+          this.summonWindupUntil = 0;
+          this.warnGfx.clear();
+          this.warnGfx.setVisible(false);
+          this.pendingSummons += 3;
+          this.body.setTintFill(0xe0b0ff);
+          this.flashUntil = time + 220;
+        }
+      } else if (time >= this.nextSummonAt) {
+        this.nextSummonAt = time + this.summonCooldownMs;
+        this.summonWindupUntil = time + 900;
+        this.body.setTint(0xe0b0ff);
+      }
     }
   }
 
@@ -362,20 +383,25 @@ export class Enemy {
     if (nextPhase !== this.bossPhase) {
       this.bossPhase = nextPhase;
       this.phaseAnnounce = true;
-      // Phase punch: brief invuln flash + faster cadence.
-      this.flashUntil = time + 400;
+      this.flashUntil = time + 450;
       this.body.setTintFill(0xffffff);
+      this.attackWindupUntil = 0;
+      this.nextAttackAt = time + 700;
       if (nextPhase === 2) {
-        this.shootCooldownMs = 900;
         this.speed = 62;
-        this.pendingSummons += 4;
+        this.keepDistance = 180;
+        this.pendingSummons += 3;
       } else if (nextPhase === 3) {
-        this.shootCooldownMs = 700;
-        this.speed = 70;
-        this.dashCooldownMs = 2600;
+        this.speed = 72;
+        this.keepDistance = 140;
+        this.dashCooldownMs = 2800;
+        this.nextDashAt = time + 900;
+        // Seed a learnable hazard triangle on phase enter.
         this.pendingHazards += 3;
       }
     }
+
+    if (this.nextAttackAt === 0) this.nextAttackAt = time + 900;
 
     const dx = playerX - this.x;
     const dy = playerY - this.y;
@@ -383,25 +409,26 @@ export class Enemy {
     const nx = dx / dist;
     const ny = dy / dist;
 
-    // Phase 3: charger-like telegraphed dashes.
+    // Phase 3 dash is its own telegraphed cycle.
     if (
       this.bossPhase >= 3 &&
       this.dashCooldownMs > 0 &&
       this.telegraphUntil === 0 &&
+      this.attackWindupUntil === 0 &&
       time >= this.nextDashAt &&
-      dist < 420
+      dist < 440
     ) {
-      this.telegraphUntil = time + 560;
+      this.telegraphUntil = time + 620;
       this.telegraphNx = nx;
       this.telegraphNy = ny;
       this.nextDashAt = time + this.dashCooldownMs;
     }
 
     if (this.telegraphUntil > 0 && time < this.telegraphUntil) {
-      this.drawTelegraph(time, 220);
+      this.drawTelegraph(time, 240);
       this.body.setTint(0xff5555);
-      this.x += (nx * this.speed * 0.15 * delta) / 1000;
-      this.y += (ny * this.speed * 0.15 * delta) / 1000;
+      this.x += (nx * this.speed * 0.12 * delta) / 1000;
+      this.y += (ny * this.speed * 0.12 * delta) / 1000;
       this.body.setPosition(this.x, this.y);
       this.syncHpBar();
       return;
@@ -414,6 +441,51 @@ export class Enemy {
       this.dashUntil = time + this.dashDurationMs;
       this.dashVx = this.telegraphNx * this.dashSpeed;
       this.dashVy = this.telegraphNy * this.dashSpeed;
+      // Predictable arc of no-go zones after each charge.
+      this.pendingHazards += 3;
+    }
+
+    // Attack windup → act → recover (phases 1–2, and phase-3 fan between dashes).
+    if (
+      this.attackWindupUntil === 0 &&
+      time >= this.nextAttackAt &&
+      time >= this.dashUntil &&
+      this.telegraphUntil === 0
+    ) {
+      const windup = this.bossPhase === 1 ? 380 : this.bossPhase === 2 ? 560 : 420;
+      this.attackWindupUntil = time + windup;
+      this.telegraphNx = nx;
+      this.telegraphNy = ny;
+    }
+
+    if (this.attackWindupUntil > 0 && time < this.attackWindupUntil) {
+      this.drawAttackWindup(time, this.bossPhase);
+      this.body.setTint(0xff8888);
+      // Slow orbit during windup so the tell is readable.
+      const step = (this.speed * 0.2 * delta) / 1000;
+      this.x += -ny * step;
+      this.y += nx * step;
+      this.body.setPosition(this.x, this.y);
+      this.syncHpBar();
+      return;
+    }
+
+    if (this.attackWindupUntil > 0 && time >= this.attackWindupUntil) {
+      this.attackWindupUntil = 0;
+      this.warnGfx.clear();
+      this.warnGfx.setVisible(false);
+      if (this.bossPhase === 1) {
+        this.fireBullet(this.telegraphNx, this.telegraphNy, bullets);
+        this.nextAttackAt = time + 2100;
+      } else if (this.bossPhase === 2) {
+        this.fireRing(bullets, 10, 0.88);
+        this.fireBullet(this.telegraphNx, this.telegraphNy, bullets);
+        this.pendingSummons += 2;
+        this.nextAttackAt = time + 2800;
+      } else {
+        this.fireFan(this.telegraphNx, this.telegraphNy, bullets, 5, 0.58);
+        this.nextAttackAt = time + 1600;
+      }
     }
 
     let moveX = nx;
@@ -444,20 +516,39 @@ export class Enemy {
     this.body.setPosition(this.x, this.y);
     this.body.setFlipX(moveX < 0 || this.dashVx < 0);
     this.syncHpBar();
+  }
 
-    if (this.shootCooldownMs > 0 && time >= this.nextShotAt && dist < 560) {
-      this.nextShotAt = time + this.shootCooldownMs;
-      if (this.bossPhase === 1) {
-        this.fireBullet(nx, ny, bullets);
-      } else if (this.bossPhase === 2) {
-        // Learnable ring + aimed shot.
-        this.fireRing(bullets, 8, 0.85);
-        this.fireBullet(nx, ny, bullets);
-      } else {
-        // Phase 3: fan spray toward player.
-        this.fireFan(nx, ny, bullets, 5, 0.55);
-        if (Math.random() < 0.35) this.pendingHazards += 1;
-      }
+  private drawSummonCast(time: number): void {
+    const pulse = 0.4 + Math.sin(time / 60) * 0.25;
+    this.warnGfx.setVisible(true);
+    this.warnGfx.clear();
+    this.warnGfx.lineStyle(3, 0xd4a5ff, pulse);
+    this.warnGfx.strokeCircle(this.x, this.y, this.radius + 18 + pulse * 10);
+    this.warnGfx.fillStyle(0xc77dff, pulse * 0.2);
+    this.warnGfx.fillCircle(this.x, this.y, this.radius + 14);
+  }
+
+  private drawAttackWindup(time: number, phase: number): void {
+    const pulse = 0.5 + Math.sin(time / 45) * 0.28;
+    this.warnGfx.setVisible(true);
+    this.warnGfx.clear();
+    if (phase === 2) {
+      this.warnGfx.lineStyle(3, 0xffe66d, pulse);
+      this.warnGfx.strokeCircle(this.x, this.y, this.radius + 28);
+      this.warnGfx.lineStyle(2, 0xff8a8a, pulse * 0.8);
+      this.warnGfx.strokeCircle(this.x, this.y, this.radius + 48);
+    } else {
+      const reach = phase === 3 ? 200 : 260;
+      this.warnGfx.lineStyle(4, 0xff6b6b, pulse);
+      this.warnGfx.beginPath();
+      this.warnGfx.moveTo(this.x, this.y);
+      this.warnGfx.lineTo(
+        this.x + this.telegraphNx * reach,
+        this.y + this.telegraphNy * reach,
+      );
+      this.warnGfx.strokePath();
+      this.warnGfx.fillStyle(0xff4444, pulse * 0.3);
+      this.warnGfx.fillCircle(this.x, this.y, this.radius + 8);
     }
   }
 

@@ -85,6 +85,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setArena(this.arena);
     this.lastHp = this.player.stats.hp;
     this.enemies = new EnemySystem(this);
+    this.enemies.setArena(this.arena);
     this.weapons = new WeaponSystem(this);
     this.xpPool = new XpPool(this);
     this.healthPool = new HealthPool(this);
@@ -190,6 +191,10 @@ export class GameScene extends Phaser.Scene {
     const pauseHandlers = {
       onResume: () => this.milestones.setUiMuted(false),
       onStickChange: (forced: boolean) => this.joystick.setForceVisible(forced),
+      onRestart: () => {
+        this.milestones.setUiMuted(false);
+        this.scene.restart();
+      },
     };
     bind('ESC', () => {
       if (this.ended || this.levelUpUI.isOpen) return;
@@ -256,6 +261,7 @@ export class GameScene extends Phaser.Scene {
         this.combat.kills,
         this.enemies.aliveCount,
         metaProg,
+        this.bossHudInfo(),
       );
       return;
     }
@@ -355,9 +361,16 @@ export class GameScene extends Phaser.Scene {
       this.combat.kills,
       this.enemies.aliveCount,
       metaProg,
+      this.bossHudInfo(),
     );
 
     this.checkEndConditions();
+  }
+
+  private bossHudInfo(): { hp: number; maxHp: number; phase: number } | null {
+    const boss = this.enemies.getBoss();
+    if (!boss) return null;
+    return { hp: boss.hp, maxHp: boss.maxHp, phase: boss.bossPhase };
   }
 
   private pulseMagnet(time: number): void {

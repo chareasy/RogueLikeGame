@@ -31,16 +31,17 @@ export const SPAWN_TIMELINE: SpawnWave[] = [
     formationEveryMs: 12_000,
   },
   {
+    // ~1.25–2.5 min: start leaking flankers so mid-game isn't one soup.
     fromMs: 75_000,
     toMs: 150_000,
     intervalMs: 360,
     softCap: 90,
-    weights: { chaser: 3, speeder: 2, swarm: 3 },
+    weights: { chaser: 3, speeder: 2, swarm: 2, flanker: 2 },
     eliteEveryMs: 55_000,
     formationEveryMs: 11_000,
   },
   {
-    // 2.5–5 min: introduce flank / summon / shield elites.
+    // 2.5–5 min: surround / summon / shield elites.
     fromMs: 150_000,
     toMs: 300_000,
     intervalMs: 320,
@@ -52,11 +53,12 @@ export const SPAWN_TIMELINE: SpawnWave[] = [
       tank: 1,
       charger: 2,
       swarm: 2,
-      flanker: 2,
-      summoner: 1,
+      flanker: 3,
+      summoner: 2,
+      shield_elite: 1,
     },
-    eliteEveryMs: 45_000,
-    formationEveryMs: 22_000,
+    eliteEveryMs: 42_000,
+    formationEveryMs: 18_000,
   },
   {
     fromMs: 300_000,
@@ -72,10 +74,10 @@ export const SPAWN_TIMELINE: SpawnWave[] = [
       swarm: 2,
       flanker: 3,
       summoner: 2,
-      shield_elite: 1,
+      shield_elite: 2,
     },
-    eliteEveryMs: 38_000,
-    formationEveryMs: 18_000,
+    eliteEveryMs: 36_000,
+    formationEveryMs: 16_000,
   },
   {
     fromMs: 420_000,

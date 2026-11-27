@@ -4,7 +4,8 @@ import { GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import { pinMany, pinToScreen } from './fixUi';
 
 /**
- * Lightweight Esc pause: resume / mute / stick toggle / quit to select.
+ * Lightweight Esc pause for shareable playtests:
+ * resume / restart / mute / stick / quit + controls sheet.
  */
 export class PauseUI {
   private readonly root: Phaser.GameObjects.Container;
@@ -16,6 +17,7 @@ export class PauseUI {
   private readonly touchMode: boolean;
   private onResume: (() => void) | null = null;
   private onStickChange: ((forced: boolean) => void) | null = null;
+  private onRestart: (() => void) | null = null;
 
   constructor(private readonly scene: Phaser.Scene, touchMode: boolean) {
     this.touchMode = touchMode;
@@ -23,24 +25,55 @@ export class PauseUI {
     this.root.setVisible(false);
 
     const dim = scene.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050814, 0.72)
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050814, 0.78)
+      .setScrollFactor(0)
+      .setInteractive();
+
+    const panel = scene.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 8, 420, 420, 0x121a2c, 0.96)
+      .setStrokeStyle(2, 0x4fd1c5, 0.7)
       .setScrollFactor(0);
 
     const title = scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 120, '暂停', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '36px',
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 180, '暂停', {
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
+        fontSize: '34px',
         color: '#e8eefc',
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
       .setScrollFactor(0);
-    const resume = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, 220, 44, '继续 (Esc)', () => {
+
+    const controls = scene.add
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 - 138,
+        this.touchMode
+          ? '操作：虚拟摇杆移动 · 自动攻击 · Esc 暂停'
+          : '操作：WASD 移动 · 鼠标微调瞄准 · 自动攻击 · Esc 暂停 · M 静音',
+        {
+          fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
+          fontSize: '12px',
+          color: '#9fb0d0',
+          align: 'center',
+          wordWrap: { width: 360 },
+        },
+      )
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+
+    const resume = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 78, 240, 44, '继续 (Esc)', () => {
       this.hide();
       this.onResume?.();
     });
 
-    const muteBtn = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20, 220, 44, '', () => {
+    const restart = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 22, 240, 44, '重新开始本局', () => {
+      audioDirector.playUi();
+      this.hide();
+      this.onRestart?.();
+    });
+
+    const muteBtn = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 34, 240, 44, '', () => {
       this.muted = !this.muted;
       audioDirector.setMuted(this.muted);
       this.refreshLabels();
@@ -48,7 +81,7 @@ export class PauseUI {
     });
     this.muteLabel = muteBtn.label;
 
-    const stickBtn = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 80, 220, 44, '', () => {
+    const stickBtn = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 90, 240, 44, '', () => {
       this.stickForced = !this.stickForced;
       this.onStickChange?.(this.stickForced);
       this.refreshLabels();
@@ -56,46 +89,52 @@ export class PauseUI {
     });
     this.stickLabel = stickBtn.label;
 
-    const quit = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 140, 220, 44, '返回选角', () => {
+    const quit = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 146, 240, 44, '返回选角', () => {
       audioDirector.playMenu();
       this.scene.scene.start('CharacterSelectScene');
     });
 
-    const hint = scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 200, 'Esc 暂停/继续 · M 静音', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '13px',
-        color: '#9fb0d0',
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0);
+    const menu = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 202, 240, 44, '返回标题', () => {
+      audioDirector.playMenu();
+      this.scene.scene.start('MenuScene');
+    });
 
     this.root.add([
       dim,
+      panel,
       title,
+      controls,
       resume.bg,
       resume.label,
+      restart.bg,
+      restart.label,
       muteBtn.bg,
       muteBtn.label,
       stickBtn.bg,
       stickBtn.label,
       quit.bg,
       quit.label,
-      hint,
+      menu.bg,
+      menu.label,
     ]);
     pinToScreen(this.root);
     pinMany(
       dim,
+      panel,
       title,
+      controls,
       resume.bg,
       resume.label,
+      restart.bg,
+      restart.label,
       muteBtn.bg,
       muteBtn.label,
       stickBtn.bg,
       stickBtn.label,
       quit.bg,
       quit.label,
-      hint,
+      menu.bg,
+      menu.label,
     );
     this.refreshLabels();
   }
@@ -115,7 +154,7 @@ export class PauseUI {
       .setInteractive({ useHandCursor: true });
     const label = this.scene.add
       .text(x, y, text, {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '16px',
         color: '#e8eefc',
         fontStyle: 'bold',
@@ -124,7 +163,10 @@ export class PauseUI {
       .setScrollFactor(0);
     bg.on('pointerover', () => bg.setFillStyle(0x2f4468, 1));
     bg.on('pointerout', () => bg.setFillStyle(0x243556, 1));
-    bg.on('pointerdown', onClick);
+    bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      pointer.event?.stopPropagation?.();
+      onClick();
+    });
     return { bg, label };
   }
 
@@ -144,9 +186,11 @@ export class PauseUI {
   show(handlers: {
     onResume: () => void;
     onStickChange: (forced: boolean) => void;
+    onRestart?: () => void;
   }): void {
     this.onResume = handlers.onResume;
     this.onStickChange = handlers.onStickChange;
+    this.onRestart = handlers.onRestart ?? null;
     this.open = true;
     this.root.setVisible(true);
     pinToScreen(this.root);
@@ -161,6 +205,7 @@ export class PauseUI {
   toggle(handlers: {
     onResume: () => void;
     onStickChange: (forced: boolean) => void;
+    onRestart?: () => void;
   }): void {
     if (this.open) {
       this.hide();

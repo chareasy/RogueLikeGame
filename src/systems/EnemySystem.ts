@@ -100,17 +100,30 @@ export class EnemySystem {
     return this.bossSpawned && !this.bossAlive;
   }
 
+  /** Active boss instance for HUD / scripting. */
+  getBoss(): Enemy | null {
+    return this.enemies.find((e) => e.active && e.kind === 'boss') ?? null;
+  }
+
   /** Raise spawn pressure when the field is too empty (e.g. strong mage clear). */
   setDensityBias(bias: number): void {
     // Wider band so role spawnPressure + early openMul can actually bite.
     this.densityBias = Phaser.Math.Clamp(bias, 0.55, 1.7);
   }
 
+  private arenaRef: { enemySpeedMul: (x: number, y: number, time: number) => number } | null =
+    null;
+
+  setArena(arena: { enemySpeedMul: (x: number, y: number, time: number) => number }): void {
+    this.arenaRef = arena;
+  }
+
   update(time: number, delta: number, elapsedMs: number, player: Player): void {
     this.tickSpawner(delta, elapsedMs, player);
     for (const enemy of this.enemies) {
       if (!enemy.active) continue;
-      enemy.update(time, delta, player.x, player.y, this.bullets);
+      const slow = this.arenaRef?.enemySpeedMul(enemy.x, enemy.y, time) ?? 1;
+      enemy.update(time, delta * slow, player.x, player.y, this.bullets);
       this.flushEnemyRequests(enemy, player, time);
     }
     this.updateBullets(delta);
@@ -126,37 +139,42 @@ export class EnemySystem {
       enemy.pendingSummons -= 1;
       this.spawnKind('swarm', enemy.x, enemy.y, 40 + Math.random() * 50);
     }
-    while (enemy.pendingHazards > 0) {
-      enemy.pendingHazards -= 1;
-      // Drop near player path — learnable dodge space.
-      const ang = Math.random() * Math.PI * 2;
-      const dist = 40 + Math.random() * 120;
-      this.spawnHazard(
-        player.x + Math.cos(ang) * dist,
-        player.y + Math.sin(ang) * dist,
-        time,
-        4200 + Math.random() * 1200,
-      );
+    // Flush hazard batches as a readable arc (not random spray).
+    if (enemy.pendingHazards > 0) {
+      const count = enemy.pendingHazards;
+      enemy.pendingHazards = 0;
+      const base = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+      for (let i = 0; i < count; i += 1) {
+        const t = count === 1 ? 0 : (i / (count - 1)) - 0.5;
+        const ang = base + t * 1.4;
+        const dist = 70 + i * 28;
+        this.spawnHazard(
+          player.x + Math.cos(ang) * dist,
+          player.y + Math.sin(ang) * dist,
+          time,
+          4800,
+        );
+      }
     }
   }
 
   private showBossPhase(phase: number): void {
     this.phaseBanner?.destroy(true);
-    const titles = ['', 'Boss 阶段 I', 'Boss 阶段 II · 环弹', 'Boss 阶段 III · 冲锋禁区'];
+    const titles = ['', 'Boss 阶段 I · 点射', 'Boss 阶段 II · 环弹召唤', 'Boss 阶段 III · 冲锋禁区'];
     const details = [
       '',
-      '保持距离，观察弹道',
-      '环弹 + 召唤 · 走位穿缝',
-      '预警冲锋 + 地面禁区',
+      '红线预警 → 单发点射 · 保持距离',
+      '黄圈蓄力 → 环弹穿缝 · 召唤小怪',
+      '长红线冲锋 → 落地扇形禁区',
     ];
     const { width } = this.scene.scale;
     const root = this.scene.add.container(width / 2, 140).setScrollFactor(0).setDepth(151);
     const bg = this.scene.add
-      .rectangle(0, 0, 400, 58, 0x1a0a10, 0.88)
+      .rectangle(0, 0, 440, 62, 0x1a0a10, 0.9)
       .setStrokeStyle(2, 0xff6b6b, 0.95);
     const t = this.scene.add
       .text(0, -10, titles[phase] ?? `Boss 阶段 ${phase}`, {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '20px',
         color: '#ff8a8a',
         fontStyle: 'bold',
@@ -164,7 +182,7 @@ export class EnemySystem {
       .setOrigin(0.5);
     const d = this.scene.add
       .text(0, 14, details[phase] ?? '', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '13px',
         color: '#f0d0d0',
       })
@@ -174,14 +192,16 @@ export class EnemySystem {
     this.scene.tweens.add({
       targets: root,
       alpha: 1,
-      y: 155,
-      duration: 260,
-      hold: 2000,
+      y: 152,
+      duration: 220,
+      hold: 2400,
       yoyo: true,
-      onComplete: () => root.destroy(true),
+      onComplete: () => {
+        if (this.phaseBanner === root) this.phaseBanner = undefined;
+        root.destroy(true);
+      },
     });
     this.phaseBanner = root;
-    this.scene.cameras.main.flash(160, 255, 80, 80);
   }
 
   private spawnHazard(x: number, y: number, time: number, lifeMs: number): void {
@@ -239,9 +259,11 @@ export class EnemySystem {
 
     if (wave.eliteEveryMs && elapsedMs - this.lastEliteAt >= wave.eliteEveryMs) {
       this.lastEliteAt = elapsedMs;
-      // Mid-late elites sometimes swap to shield elites.
+      // From 2.5 min, elites often arrive as shield elites.
       const kind: EnemyKind =
-        elapsedMs >= 300_000 && Math.random() < 0.45 ? 'shield_elite' : 'elite';
+        elapsedMs >= 150_000 && Math.random() < (elapsedMs >= 300_000 ? 0.55 : 0.35)
+          ? 'shield_elite'
+          : 'elite';
       this.spawnKind(kind, player.x, player.y, 320);
     }
 
@@ -250,9 +272,12 @@ export class EnemySystem {
       elapsedMs - this.lastFormationAt >= wave.formationEveryMs
     ) {
       this.lastFormationAt = elapsedMs;
-      // Early: soft outer ring (pressure without pile-on). Late: flank pack.
-      if (elapsedMs < 150_000) {
+      // 0–75s chaser ring; 75s–3min mix; 3–6min full flank surround.
+      if (elapsedMs < 75_000) {
         this.spawnRing('chaser', player.x, player.y, 5, 310);
+      } else if (elapsedMs < 180_000) {
+        this.spawnRing('chaser', player.x, player.y, 3, 300);
+        this.spawnRing('flanker', player.x, player.y, 3, 240);
       } else {
         this.spawnFlankFormation(player.x, player.y);
       }
@@ -295,15 +320,16 @@ export class EnemySystem {
       const enemy = this.enemies.find((e) => !e.active);
       if (!enemy) break;
       enemy.spawn(kind, x, y);
+      if (kind === 'flanker') enemy.flankAngle = a;
     }
   }
 
-  /** Surround pack — readable mid-run behavior change. */
+  /** Surround pack — mid-run (3–6 min) readable behavior change. */
   private spawnFlankFormation(px: number, py: number): void {
-    const count = 5;
+    const count = 6;
     for (let i = 0; i < count; i += 1) {
       const a = (i / count) * Math.PI * 2;
-      const dist = 260;
+      const dist = 250;
       const x = Phaser.Math.Clamp(px + Math.cos(a) * dist, -ARENA_HALF + 30, ARENA_HALF - 30);
       const y = Phaser.Math.Clamp(py + Math.sin(a) * dist, -ARENA_HALF + 30, ARENA_HALF - 30);
       const enemy = this.enemies.find((e) => !e.active);

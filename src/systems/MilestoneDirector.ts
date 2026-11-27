@@ -194,19 +194,17 @@ export class MilestoneDirector {
     audioDirector.playMilestone(event.id);
 
     if (event.id === 'elite_surge') {
-      this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 16_000);
+      this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 18_000);
       for (let i = 0; i < 2; i += 1) {
         enemies.spawnKind('elite', player.x, player.y, 300 + i * 40);
       }
       enemies.spawnKind('shield_elite', player.x, player.y, 320);
-      for (let i = 0; i < 5; i += 1) {
-        enemies.spawnKind('flanker', player.x, player.y, 240 + i * 24);
-      }
+      enemies.spawnRing('flanker', player.x, player.y, 6, 250);
       for (let i = 0; i < 4; i += 1) {
-        enemies.spawnKind('charger', player.x, player.y, 260 + i * 30);
+        enemies.spawnKind('charger', player.x, player.y, 280 + i * 30);
       }
     } else if (event.id === 'chest_wave') {
-      this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 14_000);
+      this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 16_000);
       for (let i = 0; i < 28; i += 1) {
         const a = (i / 28) * Math.PI * 2;
         const d = 40 + Math.random() * 160;
@@ -218,13 +216,13 @@ export class MilestoneDirector {
       }
       xpPool.magnetizeAll();
       enemies.spawnKind('summoner', player.x, player.y, 280);
-      for (let i = 0; i < 14; i += 1) {
-        enemies.spawnKind('swarm', player.x, player.y, 220 + i * 18);
-      }
+      enemies.spawnKind('summoner', player.x, player.y, 340);
+      enemies.spawnRing('swarm', player.x, player.y, 12, 230);
     } else if (event.id === 'boss_warning') {
-      this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 20_000);
+      this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 22_000);
     } else if (event.id === 'boss_arrive') {
-      // Banner text only — no screen flash/shake over the fight.
+      // Banner + extra safe refuge for the learnable phase loop.
+      this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 12_000);
     }
   }
 

@@ -316,7 +316,7 @@ export class ArenaMap {
     // Safe zones only stay visible while an event keeps them active.
     for (const safe of this.safes) {
       const active = time < safe.activeUntil;
-      if (!active && safe.graphic.visible && safe.label.text === '安全区') {
+      if (!active && safe.graphic.visible && !safe.label.text.includes('即将')) {
         safe.graphic.setVisible(false);
         safe.icon.setVisible(false);
         safe.label.setVisible(false);
@@ -324,6 +324,9 @@ export class ArenaMap {
         safe.graphic.setVisible(true);
         safe.icon.setVisible(true);
         safe.label.setVisible(true);
+        const remainSec = Math.max(0, Math.ceil((safe.activeUntil - time) / 1000));
+        safe.label.setText(`安全区 ${remainSec}s`);
+        safe.label.setColor('#b8fff4');
       }
     }
 
@@ -358,15 +361,15 @@ export class ArenaMap {
 
     const inSafe = this.isInSafe(player.x, player.y, time);
     if (inSafe && !this.wasInSafe) {
-      this.floatHint(player.x, player.y, '进入安全区', '#7eeae0');
+      this.floatHint(player.x, player.y, '进入安全区 · 回血减伤', '#7eeae0');
     }
     this.wasInSafe = inSafe;
 
-    // Soft regen in safe zone.
+    // Soft regen in safe zone (DR is applied in Player.tryHurt).
     if (inSafe && player.stats.hp > 0) {
       player.stats.hp = Math.min(
         player.stats.maxHp,
-        player.stats.hp + (3 * delta) / 1000,
+        player.stats.hp + (4.5 * delta) / 1000,
       );
     }
   }
@@ -378,6 +381,11 @@ export class ArenaMap {
       }
     }
     return false;
+  }
+
+  /** Enemies inside an active safe zone move slower (player refuge). */
+  enemySpeedMul(x: number, y: number, time: number): number {
+    return this.isInSafe(x, y, time) ? 0.45 : 1;
   }
 
   /** Push a point out of rocks; returns clamped position. */

@@ -27,6 +27,11 @@ export class Hud {
   private targetHpWidth = 180;
   private targetXpWidth = 0;
   private targetMetaWidth = 0;
+  private readonly bossRoot: Phaser.GameObjects.Container;
+  private readonly bossBarBg: Phaser.GameObjects.Rectangle;
+  private readonly bossBarFg: Phaser.GameObjects.Rectangle;
+  private readonly bossLabel: Phaser.GameObjects.Text;
+  private targetBossWidth = 0;
 
   constructor(scene: Phaser.Scene, characterName = '守望骑士', desktopHint = true) {
     this.characterName = characterName;
@@ -93,6 +98,19 @@ export class Hud {
       .setOrigin(0.5, 1)
       .setAlpha(0.7);
 
+    this.bossRoot = scene.add.container(GAME_WIDTH / 2, 46).setVisible(false);
+    this.bossBarBg = scene.add.rectangle(0, 10, 320, 12, 0x000000, 0.55).setOrigin(0.5, 0);
+    this.bossBarFg = scene.add.rectangle(-160, 10, 320, 12, 0xff6b6b, 1).setOrigin(0, 0);
+    this.bossLabel = scene.add
+      .text(0, -4, 'BOSS', {
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
+        fontSize: '12px',
+        color: '#ff8a8a',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5, 1);
+    this.bossRoot.add([this.bossBarBg, this.bossBarFg, this.bossLabel]);
+
     this.root.add([
       this.hpBarBg,
       this.hpBarFg,
@@ -106,6 +124,7 @@ export class Hud {
       this.timeText,
       this.killText,
       hint,
+      this.bossRoot,
     ]);
 
     // Static HUD — no entrance bounce / pulsing chrome in combat.
@@ -148,6 +167,7 @@ export class Hud {
     kills: number,
     enemyCount: number,
     meta?: BoostProgress,
+    boss?: { hp: number; maxHp: number; phase: number } | null,
   ): void {
     const remain = MATCH_DURATION_MS - elapsedMs;
     this.timeText.setText(formatTime(remain));
@@ -187,6 +207,20 @@ export class Hud {
       this.metaBarFg.width += (this.targetMetaWidth - this.metaBarFg.width) * 0.16;
       this.metaBarFg.setFillStyle(meta.alreadyUnlocked ? 0x7cf29c : 0xffe66d, 1);
       this.metaText.setColor(meta.alreadyUnlocked ? '#7cf29c' : '#c9b46a');
+    }
+
+    if (boss && boss.maxHp > 0) {
+      this.bossRoot.setVisible(true);
+      const ratio = Phaser.Math.Clamp(boss.hp / boss.maxHp, 0, 1);
+      this.targetBossWidth = 320 * ratio;
+      this.bossBarFg.width += (this.targetBossWidth - this.bossBarFg.width) * 0.2;
+      this.bossLabel.setText(`BOSS · 阶段 ${boss.phase}`);
+      if (ratio > 0.66) this.bossBarFg.setFillStyle(0x7cf29c, 1);
+      else if (ratio > 0.33) this.bossBarFg.setFillStyle(0xffe66d, 1);
+      else this.bossBarFg.setFillStyle(0xff6b6b, 1);
+    } else {
+      this.bossRoot.setVisible(false);
+      this.bossBarFg.width = 320;
     }
 
     void this.desktopHint;
