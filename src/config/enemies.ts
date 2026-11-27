@@ -1,4 +1,12 @@
-export type EnemyKind = 'chaser' | 'speeder' | 'shooter' | 'elite' | 'boss';
+export type EnemyKind =
+  | 'chaser'
+  | 'speeder'
+  | 'shooter'
+  | 'tank'
+  | 'swarm'
+  | 'charger'
+  | 'elite'
+  | 'boss';
 
 export interface EnemyDef {
   kind: EnemyKind;
@@ -9,11 +17,14 @@ export interface EnemyDef {
   xp: number;
   color: number;
   touchCooldownMs: number;
-  /** Shooter-only: preferred distance from player. */
   keepDistance?: number;
   shootCooldownMs?: number;
   projectileDamage?: number;
   projectileSpeed?: number;
+  /** Charger dash settings. */
+  dashCooldownMs?: number;
+  dashSpeed?: number;
+  dashDurationMs?: number;
 }
 
 export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
@@ -50,6 +61,39 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     shootCooldownMs: 1800,
     projectileDamage: 10,
     projectileSpeed: 180,
+  },
+  tank: {
+    kind: 'tank',
+    radius: 18,
+    speed: 42,
+    hp: 90,
+    damage: 12,
+    xp: 8,
+    color: 0x7a8ca8,
+    touchCooldownMs: 650,
+  },
+  swarm: {
+    kind: 'swarm',
+    radius: 8,
+    speed: 145,
+    hp: 8,
+    damage: 4,
+    xp: 2,
+    color: 0x6dce5a,
+    touchCooldownMs: 350,
+  },
+  charger: {
+    kind: 'charger',
+    radius: 14,
+    speed: 60,
+    hp: 34,
+    damage: 10,
+    xp: 6,
+    color: 0xffe082,
+    touchCooldownMs: 500,
+    dashCooldownMs: 2800,
+    dashSpeed: 260,
+    dashDurationMs: 420,
   },
   elite: {
     kind: 'elite',

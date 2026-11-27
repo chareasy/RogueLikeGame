@@ -19,8 +19,10 @@ export class Hud {
   private readonly xpBarFg: Phaser.GameObjects.Rectangle;
   private readonly hpBarBg: Phaser.GameObjects.Rectangle;
   private readonly hpBarFg: Phaser.GameObjects.Rectangle;
+  private readonly characterName: string;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, characterName = '守望骑士') {
+    this.characterName = characterName;
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(100);
 
     this.hpBarBg = scene.add.rectangle(16, 16, 180, 14, 0x000000, 0.45).setOrigin(0, 0);
@@ -86,7 +88,7 @@ export class Hud {
     const remain = MATCH_DURATION_MS - elapsedMs;
     this.timeText.setText(formatTime(remain));
     this.hpText.setText(`${Math.ceil(stats.hp)} / ${stats.maxHp}`);
-    this.levelText.setText(`Lv.${stats.level}`);
+    this.levelText.setText(`${this.characterName} · Lv.${stats.level}`);
     this.killText.setText(`击杀 ${kills} · 场上 ${enemyCount}`);
 
     const hpRatio = Phaser.Math.Clamp(stats.hp / stats.maxHp, 0, 1);

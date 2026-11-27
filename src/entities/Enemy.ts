@@ -34,6 +34,14 @@ export class Enemy {
   projectileSpeed = 0;
   flashUntil = 0;
 
+  dashCooldownMs = 0;
+  dashSpeed = 0;
+  dashDurationMs = 0;
+  nextDashAt = 0;
+  dashUntil = 0;
+  dashVx = 0;
+  dashVy = 0;
+
   readonly body: Phaser.GameObjects.Image;
   readonly hpBarBg: Phaser.GameObjects.Rectangle;
   readonly hpBarFg: Phaser.GameObjects.Rectangle;
@@ -71,8 +79,13 @@ export class Enemy {
     this.shootCooldownMs = def.shootCooldownMs ?? 0;
     this.projectileDamage = def.projectileDamage ?? 0;
     this.projectileSpeed = def.projectileSpeed ?? 0;
+    this.dashCooldownMs = def.dashCooldownMs ?? 0;
+    this.dashSpeed = def.dashSpeed ?? 0;
+    this.dashDurationMs = def.dashDurationMs ?? 0;
     this.nextTouchAt = 0;
     this.nextShotAt = 0;
+    this.nextDashAt = 0;
+    this.dashUntil = 0;
     this.flashUntil = 0;
 
     this.body.setTexture(ASSET_KEYS.enemies[kind]);
@@ -84,7 +97,7 @@ export class Enemy {
     this.body.setActive(true);
     this.body.setAlpha(1);
 
-    const showBar = kind === 'elite' || kind === 'boss';
+    const showBar = kind === 'elite' || kind === 'boss' || kind === 'tank';
     this.hpBarBg.setVisible(showBar);
     this.hpBarFg.setVisible(showBar);
     if (showBar) {
@@ -99,7 +112,9 @@ export class Enemy {
     this.hp -= amount;
     this.flashUntil = time + 80;
     this.body.setTintFill(0xffffff);
-    if (this.kind === 'elite' || this.kind === 'boss') this.syncHpBar();
+    if (this.kind === 'elite' || this.kind === 'boss' || this.kind === 'tank') {
+      this.syncHpBar();
+    }
     return this.hp <= 0;
   }
 
@@ -126,33 +141,45 @@ export class Enemy {
     const nx = dx / dist;
     const ny = dy / dist;
 
+    if (this.dashCooldownMs > 0 && time >= this.nextDashAt && dist < 360) {
+      this.nextDashAt = time + this.dashCooldownMs;
+      this.dashUntil = time + this.dashDurationMs;
+      this.dashVx = nx * this.dashSpeed;
+      this.dashVy = ny * this.dashSpeed;
+    }
+
     let moveX = nx;
     let moveY = ny;
+    let step = (this.speed * delta) / 1000;
 
-    if (this.keepDistance > 0) {
-      if (dist < this.keepDistance * 0.85) {
-        moveX = -nx;
-        moveY = -ny;
-      } else if (dist > this.keepDistance * 1.15) {
-        moveX = nx;
-        moveY = ny;
-      } else {
-        moveX = -ny;
-        moveY = nx;
+    if (time < this.dashUntil) {
+      this.x += (this.dashVx * delta) / 1000;
+      this.y += (this.dashVy * delta) / 1000;
+      this.body.setTint(0xfff59d);
+    } else {
+      if (this.keepDistance > 0) {
+        if (dist < this.keepDistance * 0.85) {
+          moveX = -nx;
+          moveY = -ny;
+        } else if (dist > this.keepDistance * 1.15) {
+          moveX = nx;
+          moveY = ny;
+        } else {
+          moveX = -ny;
+          moveY = nx;
+        }
       }
+      this.x += moveX * step;
+      this.y += moveY * step;
+      if (time >= this.flashUntil) this.body.clearTint();
     }
 
-    const step = (this.speed * delta) / 1000;
-    this.x += moveX * step;
-    this.y += moveY * step;
     this.body.setPosition(this.x, this.y);
-    this.body.setFlipX(moveX < 0);
+    this.body.setFlipX(moveX < 0 || this.dashVx < 0);
 
-    if (time >= this.flashUntil) {
-      this.body.clearTint();
+    if (this.kind === 'elite' || this.kind === 'boss' || this.kind === 'tank') {
+      this.syncHpBar();
     }
-
-    if (this.kind === 'elite' || this.kind === 'boss') this.syncHpBar();
 
     if (this.shootCooldownMs > 0 && time >= this.nextShotAt && dist < 520) {
       this.nextShotAt = time + this.shootCooldownMs;

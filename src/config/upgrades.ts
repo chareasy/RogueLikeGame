@@ -6,7 +6,11 @@ export type UpgradeId =
   | 'movespeed'
   | 'maxhp'
   | 'magnet'
-  | 'area';
+  | 'area'
+  | 'orbit'
+  | 'aura'
+  | 'crit'
+  | 'regen';
 
 export interface UpgradeDef {
   id: UpgradeId;
@@ -61,7 +65,31 @@ export const UPGRADES: UpgradeDef[] = [
   {
     id: 'area',
     title: '刃域扩大',
-    description: '弹道体积 +20%',
+    description: '弹道 / 光环体积 +20%',
+    maxStacks: 5,
+  },
+  {
+    id: 'orbit',
+    title: '星刃环绕',
+    description: '环绕刃 +1（未拥有则解锁）',
+    maxStacks: 6,
+  },
+  {
+    id: 'aura',
+    title: '焚场光环',
+    description: '光环伤害与半径增强（未拥有则解锁）',
+    maxStacks: 6,
+  },
+  {
+    id: 'crit',
+    title: '致命一击',
+    description: '暴击率 +8%',
+    maxStacks: 5,
+  },
+  {
+    id: 'regen',
+    title: '生命回流',
+    description: '每秒回复 +1 生命',
     maxStacks: 5,
   },
 ];

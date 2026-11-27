@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
 import { ASSET_KEYS } from '../config/assets';
 import {
+  getCharacter,
+  type CharacterId,
+} from '../config/characters';
+import {
   ARENA_HALF,
   ARENA_SIZE,
   COLORS,
@@ -36,15 +40,18 @@ export class GameScene extends Phaser.Scene {
     this.elapsedMs = 0;
     this.ended = false;
 
+    const characterId = (this.registry.get('selectedCharacter') as CharacterId) || 'knight';
+    const character = getCharacter(characterId);
+
     this.cameras.main.setBackgroundColor(COLORS.bg);
     this.drawArena();
 
-    this.player = new Player(this);
+    this.player = new Player(this, character);
     this.enemies = new EnemySystem(this);
     this.weapons = new WeaponSystem(this);
     this.xpPool = new XpPool(this);
     this.combat = new CombatSystem();
-    this.hud = new Hud(this);
+    this.hud = new Hud(this, character.name);
     this.levelUpUI = new LevelUpUI(this);
     this.resultUI = new ResultUI(this);
 
@@ -56,7 +63,6 @@ export class GameScene extends Phaser.Scene {
       ARENA_SIZE + 80,
     );
 
-    // Warm-up spawns so the arena isn't empty.
     for (let i = 0; i < 4; i += 1) {
       this.enemies.spawnKind('chaser', 0, 0, 320 + i * 40);
     }
@@ -84,7 +90,6 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (this.ended) return;
 
-    // Use scene clock so time is stable.
     const time = this.time.now;
 
     if (this.levelUpUI.isOpen) {
@@ -108,6 +113,10 @@ export class GameScene extends Phaser.Scene {
       this.enemies.enemies,
       (x, y, value) => this.xpPool.spawn(x, y, value),
     );
+
+    this.flushSkillKills(this.weapons.pendingOrbitKills);
+    this.flushSkillKills(this.weapons.pendingAuraKills);
+
     this.combat.resolveEnemyContact(time, this.player, this.enemies.enemies);
     this.combat.resolveEnemyBullets(time, this.player, this.enemies.bullets);
 
@@ -131,6 +140,16 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.checkEndConditions();
+  }
+
+  private flushSkillKills(
+    pending: Array<{ x: number; y: number; xp: number }>,
+  ): void {
+    while (pending.length > 0) {
+      const kill = pending.pop()!;
+      this.combat.kills += 1;
+      this.xpPool.spawn(kill.x, kill.y, kill.xp);
+    }
   }
 
   private checkEndConditions(): void {
@@ -158,6 +177,7 @@ export class GameScene extends Phaser.Scene {
       this.combat.kills,
       this.player.stats.level,
       this.elapsedMs,
+      this.player.character.name,
     );
   }
 }

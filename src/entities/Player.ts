@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ASSET_KEYS } from '../config/assets';
+import type { CharacterDef } from '../config/characters';
 import { ARENA_HALF, PLAYER } from '../config/constants';
 import { PlayerStats } from './PlayerStats';
 
@@ -7,6 +7,7 @@ export class Player {
   readonly sprite: Phaser.GameObjects.Image;
   readonly radius = PLAYER.radius;
   readonly stats = new PlayerStats();
+  readonly character: CharacterDef;
   invulnUntil = 0;
   private readonly cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   private readonly wasd: {
@@ -16,8 +17,10 @@ export class Player {
     right: Phaser.Input.Keyboard.Key;
   };
 
-  constructor(private readonly scene: Phaser.Scene) {
-    this.sprite = scene.add.image(0, 0, ASSET_KEYS.player);
+  constructor(private readonly scene: Phaser.Scene, character: CharacterDef) {
+    this.character = character;
+    this.stats.applyCharacter(character);
+    this.sprite = scene.add.image(0, 0, character.assetKey);
     this.sprite.setDepth(10);
     this.sprite.setDisplaySize(PLAYER.radius * 2.4, PLAYER.radius * 2.4);
 
@@ -40,6 +43,8 @@ export class Player {
   }
 
   update(time: number, delta: number): void {
+    this.stats.tickRegen(delta);
+
     let dx = 0;
     let dy = 0;
     if (this.cursors.left.isDown || this.wasd.left.isDown) dx -= 1;

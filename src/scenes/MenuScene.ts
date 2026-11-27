@@ -31,7 +31,7 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30, '移动躲避 · 自动攻击 · 升级三选一', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30, '多角色 · 多武器技能 · 更丰富怪潮', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '16px',
         color: '#d7e2f7',
@@ -41,10 +41,10 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const btn = this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, 200, 52, 0x4fd1c5, 1)
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, 220, 52, 0x4fd1c5, 1)
       .setInteractive({ useHandCursor: true });
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, '开始割草', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, '选择角色', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '20px',
         color: '#0b1020',
@@ -52,7 +52,7 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const start = () => this.scene.start('GameScene');
+    const start = () => this.scene.start('CharacterSelectScene');
     btn.on('pointerover', () => btn.setFillStyle(0x7eeae0, 1));
     btn.on('pointerout', () => btn.setFillStyle(0x4fd1c5, 1));
     btn.on('pointerdown', start);
@@ -61,7 +61,7 @@ export class MenuScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-SPACE', start);
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 28, 'MVP · 8 分钟 · Boss 于 6:00 出现 · Enter / 空格开始', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 28, '4 名角色 · 8 种敌人 · 12 种强化 · Enter / 空格继续', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '12px',
         color: '#c5d0e6',

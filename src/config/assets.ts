@@ -1,24 +1,40 @@
 import type { EnemyKind } from './enemies';
 
 export const ASSET_KEYS = {
-  player: 'player',
+  player: 'player_knight',
   projectile: 'projectile',
+  orbitBlade: 'orbit_blade',
+  auraRing: 'aura_ring',
   enemyBullet: 'enemy_bullet',
   xpGem: 'xp_gem',
   ground: 'ground_tile',
   menuBg: 'menu_bg',
+  characters: {
+    knight: 'player_knight',
+    mage: 'player_mage',
+    ranger: 'player_ranger',
+    berserker: 'player_berserker',
+  },
   enemies: {
     chaser: 'enemy_chaser',
     speeder: 'enemy_speeder',
     shooter: 'enemy_shooter',
+    tank: 'enemy_tank',
+    swarm: 'enemy_swarm',
+    charger: 'enemy_charger',
     elite: 'enemy_elite',
     boss: 'enemy_boss',
   } as Record<EnemyKind, string>,
 } as const;
 
 export const ASSET_FILES: Array<{ key: string; path: string }> = [
-  { key: ASSET_KEYS.player, path: 'assets/player.png' },
+  { key: ASSET_KEYS.characters.knight, path: 'assets/player_knight.png' },
+  { key: ASSET_KEYS.characters.mage, path: 'assets/player_mage.png' },
+  { key: ASSET_KEYS.characters.ranger, path: 'assets/player_ranger.png' },
+  { key: ASSET_KEYS.characters.berserker, path: 'assets/player_berserker.png' },
   { key: ASSET_KEYS.projectile, path: 'assets/projectile.png' },
+  { key: ASSET_KEYS.orbitBlade, path: 'assets/orbit_blade.png' },
+  { key: ASSET_KEYS.auraRing, path: 'assets/aura_ring.png' },
   { key: ASSET_KEYS.enemyBullet, path: 'assets/enemy_bullet.png' },
   { key: ASSET_KEYS.xpGem, path: 'assets/xp_gem.png' },
   { key: ASSET_KEYS.ground, path: 'assets/ground_tile.png' },
@@ -26,6 +42,9 @@ export const ASSET_FILES: Array<{ key: string; path: string }> = [
   { key: ASSET_KEYS.enemies.chaser, path: 'assets/enemy_chaser.png' },
   { key: ASSET_KEYS.enemies.speeder, path: 'assets/enemy_speeder.png' },
   { key: ASSET_KEYS.enemies.shooter, path: 'assets/enemy_shooter.png' },
+  { key: ASSET_KEYS.enemies.tank, path: 'assets/enemy_tank.png' },
+  { key: ASSET_KEYS.enemies.swarm, path: 'assets/enemy_swarm.png' },
+  { key: ASSET_KEYS.enemies.charger, path: 'assets/enemy_charger.png' },
   { key: ASSET_KEYS.enemies.elite, path: 'assets/enemy_elite.png' },
   { key: ASSET_KEYS.enemies.boss, path: 'assets/enemy_boss.png' },
 ];
