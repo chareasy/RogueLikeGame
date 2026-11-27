@@ -5,12 +5,24 @@ import { hasTintSkin, loadMeta } from '../config/meta';
 import type { ArenaMap } from '../systems/ArenaMap';
 import { PlayerStats } from './PlayerStats';
 
+export type DeathCause = 'contact' | 'bullet' | 'poison' | 'charge' | 'unknown';
+
+export const DEATH_CAUSE_LABEL: Record<DeathCause, string> = {
+  contact: '被近战贴身击倒',
+  bullet: '被敌方弹幕击倒',
+  poison: '中毒耗尽生命',
+  charge: '被冲锋撞倒',
+  unknown: '力竭倒下',
+};
+
 export class Player {
   readonly sprite: Phaser.GameObjects.Image;
   readonly radius = PLAYER.radius;
   readonly stats = new PlayerStats();
   readonly character: CharacterDef;
   invulnUntil = 0;
+  /** Last damage source that hurt the player (for death attribution). */
+  lastHurtCause: DeathCause = 'unknown';
   private readonly cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   private readonly wasd: {
     up: Phaser.Input.Keyboard.Key;
@@ -99,7 +111,7 @@ export class Player {
     this.sprite.setAlpha(flashing ? 0.45 + 0.55 * Math.sin(time / 40) : 1);
   }
 
-  tryHurt(amount: number, time: number): boolean {
+  tryHurt(amount: number, time: number, cause: DeathCause = 'contact'): boolean {
     if (time < this.invulnUntil) return false;
     // Safe zone softens contact / poison hits.
     let dmg = amount;
@@ -107,6 +119,7 @@ export class Player {
       dmg = Math.max(1, Math.floor(amount * 0.35));
     }
     this.stats.hp = Math.max(0, this.stats.hp - dmg);
+    this.lastHurtCause = cause;
     this.invulnUntil = time + PLAYER.invulnMs;
     this.scene.cameras.main.shake(80, 0.004);
     return true;

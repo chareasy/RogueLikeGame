@@ -239,7 +239,7 @@ export class ArenaMap {
     if (this.poisonTickAcc >= 400) {
       this.poisonTickAcc = 0;
       if (inPoison) {
-        player.tryHurt(4, time);
+        player.tryHurt(4, time, 'poison');
         this.floatHint(player.x, player.y - 6, '-毒', '#d6ff9a');
         // Brief green flash without wiping meta skin tint permanently.
         const prevAlpha = player.sprite.alpha;

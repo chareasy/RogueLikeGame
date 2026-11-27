@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOSS_SPAWN_MS } from '../config/constants';
+import { BOSS_SPAWN_MS, GAME_WIDTH } from '../config/constants';
 import type { EnemySystem } from './EnemySystem';
 import type { Player } from '../entities/Player';
 import type { XpPool } from './XpPool';
@@ -8,40 +8,57 @@ import { audioDirector } from '../audio/AudioDirector';
 export interface MilestoneEvent {
   id: string;
   atMs: number;
+  /** Seconds before the event to show a countdown telegraph. */
+  warnMs?: number;
   title: string;
   detail: string;
+  warnTitle?: string;
 }
 
 export const MILESTONES: MilestoneEvent[] = [
   {
     id: 'elite_surge',
     atMs: 2 * 60_000,
+    warnMs: 7_000,
     title: '精英潮来袭！',
     detail: '高威胁单位集中出现',
+    warnTitle: '精英潮将至',
   },
   {
     id: 'chest_wave',
     atMs: 4 * 60_000,
+    warnMs: 7_000,
     title: '宝箱潮！',
     detail: '经验雨 + 磁场脉冲',
+    warnTitle: '宝箱潮将至',
   },
   {
     id: 'boss_warning',
     atMs: BOSS_SPAWN_MS - 30_000,
+    warnMs: 8_000,
     title: 'Boss 接近中…',
     detail: '30 秒后降临，准备走位',
+    warnTitle: 'Boss 逼近',
   },
   {
     id: 'boss_arrive',
     atMs: BOSS_SPAWN_MS,
+    warnMs: 6_000,
     title: 'Boss 降临！',
     detail: '集火核心，拉开距离',
+    warnTitle: 'Boss 即将降临',
   },
 ];
 
 export class MilestoneDirector {
   private fired = new Set<string>();
+  private warnStarted = new Set<string>();
   private banner?: Phaser.GameObjects.Container;
+  private countdownRoot?: Phaser.GameObjects.Container;
+  private countdownText?: Phaser.GameObjects.Text;
+  private countdownBar?: Phaser.GameObjects.Rectangle;
+  private countdownBarBg?: Phaser.GameObjects.Rectangle;
+  private countdownEvent: MilestoneEvent | null = null;
 
   constructor(private readonly scene: Phaser.Scene) {}
 
@@ -52,10 +69,91 @@ export class MilestoneDirector {
     xpPool: XpPool,
   ): void {
     for (const event of MILESTONES) {
+      const warnMs = event.warnMs ?? 0;
+      if (
+        warnMs > 0 &&
+        !this.fired.has(event.id) &&
+        !this.warnStarted.has(event.id) &&
+        elapsedMs >= event.atMs - warnMs &&
+        elapsedMs < event.atMs
+      ) {
+        this.warnStarted.add(event.id);
+        this.beginCountdown(event);
+        this.scene.cameras.main.flash(120, 255, 200, 80);
+        audioDirector.playUi();
+      }
+
       if (elapsedMs < event.atMs || this.fired.has(event.id)) continue;
       this.fired.add(event.id);
+      this.clearCountdown();
       this.trigger(event, enemies, player, xpPool);
     }
+
+    this.refreshCountdown(elapsedMs);
+  }
+
+  private beginCountdown(event: MilestoneEvent): void {
+    this.clearCountdown();
+    this.countdownEvent = event;
+    const root = this.scene.add
+      .container(GAME_WIDTH / 2, 52)
+      .setScrollFactor(0)
+      .setDepth(148);
+    const bg = this.scene.add
+      .rectangle(0, 0, 360, 44, 0x0b1020, 0.78)
+      .setStrokeStyle(2, 0xffb347, 0.95);
+    const title = this.scene.add
+      .text(0, -8, event.warnTitle ?? event.title, {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '15px',
+        color: '#ffb347',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    const barBg = this.scene.add.rectangle(0, 12, 280, 8, 0x1a2744, 1).setOrigin(0.5);
+    const bar = this.scene.add.rectangle(-140, 12, 280, 8, 0xffb347, 1).setOrigin(0, 0.5);
+    const text = this.scene.add
+      .text(0, 12, '', {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '11px',
+        color: '#0b1020',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    root.add([bg, title, barBg, bar, text]);
+    this.countdownRoot = root;
+    this.countdownText = text;
+    this.countdownBar = bar;
+    this.countdownBarBg = barBg;
+  }
+
+  private refreshCountdown(elapsedMs: number): void {
+    if (!this.countdownEvent || !this.countdownRoot) return;
+    const event = this.countdownEvent;
+    const warnMs = event.warnMs ?? 1;
+    const remain = Math.max(0, event.atMs - elapsedMs);
+    if (remain <= 0) {
+      this.clearCountdown();
+      return;
+    }
+    const ratio = Phaser.Math.Clamp(remain / warnMs, 0, 1);
+    const secs = (remain / 1000).toFixed(1);
+    this.countdownText?.setText(`${secs}s`);
+    this.countdownBar?.setScale(ratio, 1);
+    // Edge pulse when under 2s.
+    if (remain < 2000) {
+      this.countdownRoot.setAlpha(0.65 + Math.sin(elapsedMs / 60) * 0.35);
+    }
+    void this.countdownBarBg;
+  }
+
+  private clearCountdown(): void {
+    this.countdownRoot?.destroy(true);
+    this.countdownRoot = undefined;
+    this.countdownText = undefined;
+    this.countdownBar = undefined;
+    this.countdownBarBg = undefined;
+    this.countdownEvent = null;
   }
 
   private trigger(

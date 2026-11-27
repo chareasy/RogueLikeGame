@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { DEATH_CAUSE_LABEL, type DeathCause } from '../entities/Player';
 
 export class ResultUI {
   private readonly root: Phaser.GameObjects.Container;
@@ -16,6 +17,7 @@ export class ResultUI {
     elapsedMs: number,
     characterName = '',
     unlock?: { unlockedBoost: boolean; unlockedTint: boolean },
+    deathCause?: DeathCause,
   ): void {
     this.root.removeAll(true);
     this.root.setVisible(true);
@@ -24,11 +26,26 @@ export class ResultUI {
       .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050814, 0.8);
 
     const title = this.scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, won ? '胜利！' : '你倒下了', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 118, won ? '胜利！' : '你倒下了', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '42px',
         color: won ? '#7cf29c' : '#ff6b6b',
         fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+
+    const causeLine =
+      !won && deathCause
+        ? DEATH_CAUSE_LABEL[deathCause]
+        : won
+          ? '坚持到了最后'
+          : '';
+
+    const causeText = this.scene.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 72, causeLine, {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '15px',
+        color: won ? '#9fb0d0' : '#ffb4a8',
       })
       .setOrigin(0.5);
 
@@ -37,7 +54,7 @@ export class ResultUI {
     const stats = this.scene.add
       .text(
         GAME_WIDTH / 2,
-        GAME_HEIGHT / 2 - 30,
+        GAME_HEIGHT / 2 - 34,
         `${characterName ? characterName + ' · ' : ''}存活 ${mins}:${secs
           .toString()
           .padStart(2, '0')} · 等级 ${level} · 击杀 ${kills}`,
@@ -55,7 +72,7 @@ export class ResultUI {
     const unlockText = this.scene.add
       .text(
         GAME_WIDTH / 2,
-        GAME_HEIGHT / 2 + 8,
+        GAME_HEIGHT / 2 + 4,
         unlockBits.length > 0 ? unlockBits.join(' · ') : '继续挑战可解锁起始强化 / 皮肤',
         {
           fontFamily: 'Segoe UI, sans-serif',
@@ -97,6 +114,16 @@ export class ResultUI {
       this.scene.scene.restart();
     });
 
-    this.root.add([dim, title, stats, unlockText, again, againText, retry, retryText]);
+    this.root.add([
+      dim,
+      title,
+      causeText,
+      stats,
+      unlockText,
+      again,
+      againText,
+      retry,
+      retryText,
+    ]);
   }
 }

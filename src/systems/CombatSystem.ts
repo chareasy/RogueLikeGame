@@ -73,7 +73,8 @@ export class CombatSystem {
         enemy.y,
       );
       if (dist <= player.radius + enemy.radius) {
-        if (player.tryHurt(enemy.damage, time)) {
+        const cause = time < enemy.dashUntil ? 'charge' : 'contact';
+        if (player.tryHurt(enemy.damage, time, cause)) {
           enemy.nextTouchAt = time + enemy.touchCooldownMs;
         }
       }
@@ -94,7 +95,7 @@ export class CombatSystem {
         bullet.y,
       );
       if (dist <= player.radius + bullet.radius) {
-        if (player.tryHurt(bullet.damage, time)) {
+        if (player.tryHurt(bullet.damage, time, 'bullet')) {
           bullet.active = false;
           bullet.graphic.setVisible(false);
         }

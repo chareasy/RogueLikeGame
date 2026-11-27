@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_HEIGHT } from '../config/constants';
 
 /**
- * Touch / pointer virtual stick (bottom-left). Also works with mouse drag.
+ * Touch virtual stick (bottom-left). Hidden on fine-pointer / desktop.
  */
 export class VirtualJoystick {
   private readonly base: Phaser.GameObjects.Arc;
@@ -13,11 +13,18 @@ export class VirtualJoystick {
   private activePointerId: number | null = null;
   private dx = 0;
   private dy = 0;
+  /** True when device reports coarse pointer (touch-first). */
+  readonly touchMode: boolean;
   enabled = true;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.originX = 88;
     this.originY = GAME_HEIGHT - 88;
+
+    this.touchMode =
+      typeof window !== 'undefined' &&
+      !!window.matchMedia &&
+      window.matchMedia('(pointer: coarse)').matches;
 
     this.base = scene.add
       .circle(this.originX, this.originY, this.maxRadius, 0x1a2744, 0.45)
@@ -31,13 +38,15 @@ export class VirtualJoystick {
       .setScrollFactor(0)
       .setDepth(121);
 
-    // Only show strongly on coarse pointers; keep subtle on desktop.
-    const coarse =
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(pointer: coarse)').matches;
-    this.base.setAlpha(coarse ? 0.55 : 0.28);
-    this.thumb.setAlpha(coarse ? 0.75 : 0.35);
+    // Desktop: hide entirely so WASD / mouse aim stay primary.
+    if (!this.touchMode) {
+      this.base.setVisible(false).setAlpha(0);
+      this.thumb.setVisible(false).setAlpha(0);
+      this.enabled = false;
+    } else {
+      this.base.setAlpha(0.55);
+      this.thumb.setAlpha(0.75);
+    }
 
     scene.input.on('pointerdown', this.onDown, this);
     scene.input.on('pointermove', this.onMove, this);
@@ -58,8 +67,7 @@ export class VirtualJoystick {
   }
 
   private onDown(pointer: Phaser.Input.Pointer): void {
-    if (!this.enabled || this.activePointerId !== null) return;
-    // Capture if near stick OR left half on touch.
+    if (!this.touchMode || !this.enabled || this.activePointerId !== null) return;
     const dist = Phaser.Math.Distance.Between(
       pointer.x,
       pointer.y,
@@ -99,6 +107,11 @@ export class VirtualJoystick {
   }
 
   setVisible(visible: boolean): void {
+    if (!this.touchMode) {
+      this.base.setVisible(false);
+      this.thumb.setVisible(false);
+      return;
+    }
     this.base.setVisible(visible);
     this.thumb.setVisible(visible);
   }

@@ -57,6 +57,58 @@ export function hasTintSkin(meta: MetaProgress, id: CharacterId): boolean {
   return meta.tintSkins.includes(id);
 }
 
+/** Survive / kill thresholds for starter boost unlock. */
+export const BOOST_SURVIVE_MS = 2 * 60_000;
+export const BOOST_KILL_TARGET = 40;
+
+export interface BoostProgress {
+  alreadyUnlocked: boolean;
+  surviveMs: number;
+  surviveTargetMs: number;
+  kills: number;
+  killTarget: number;
+  /** 0–1 best of survive/kill progress this run (or 1 if unlocked). */
+  ratio: number;
+  label: string;
+}
+
+/** In-run progress toward starter boost for the current character. */
+export function boostProgress(
+  meta: MetaProgress,
+  characterId: CharacterId,
+  elapsedMs: number,
+  kills: number,
+  won = false,
+): BoostProgress {
+  if (hasStarterBoost(meta, characterId)) {
+    return {
+      alreadyUnlocked: true,
+      surviveMs: BOOST_SURVIVE_MS,
+      surviveTargetMs: BOOST_SURVIVE_MS,
+      kills: BOOST_KILL_TARGET,
+      killTarget: BOOST_KILL_TARGET,
+      ratio: 1,
+      label: '起始强化已解锁',
+    };
+  }
+  const surviveMs = Math.min(elapsedMs, BOOST_SURVIVE_MS);
+  const killProg = Math.min(kills, BOOST_KILL_TARGET);
+  const surviveRatio = surviveMs / BOOST_SURVIVE_MS;
+  const killRatio = killProg / BOOST_KILL_TARGET;
+  const ratio = won ? 1 : Math.max(surviveRatio, killRatio);
+  const surviveSec = Math.floor(surviveMs / 1000);
+  const targetSec = Math.floor(BOOST_SURVIVE_MS / 1000);
+  return {
+    alreadyUnlocked: false,
+    surviveMs,
+    surviveTargetMs: BOOST_SURVIVE_MS,
+    kills: killProg,
+    killTarget: BOOST_KILL_TARGET,
+    ratio,
+    label: `起始强化 ${surviveSec}/${targetSec}秒 · 击杀 ${killProg}/${BOOST_KILL_TARGET}`,
+  };
+}
+
 export interface RunRecordInput {
   characterId: CharacterId;
   won: boolean;

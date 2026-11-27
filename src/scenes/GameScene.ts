@@ -12,7 +12,7 @@ import {
   MATCH_DURATION_MS,
   PLAYER,
 } from '../config/constants';
-import { recordRun } from '../config/meta';
+import { boostProgress, loadMeta, recordRun } from '../config/meta';
 import type { EnemyKind } from '../config/enemies';
 import { Player } from '../entities/Player';
 import { ArenaMap } from '../systems/ArenaMap';
@@ -44,6 +44,7 @@ export class GameScene extends Phaser.Scene {
   private elapsedMs = 0;
   private ended = false;
   private magnetUntil = 0;
+  private metaSnapshot = loadMeta();
 
   constructor() {
     super('GameScene');
@@ -53,6 +54,7 @@ export class GameScene extends Phaser.Scene {
     this.elapsedMs = 0;
     this.ended = false;
     this.magnetUntil = 0;
+    this.metaSnapshot = loadMeta();
 
     audioDirector.attach(this);
     audioDirector.unlock();
@@ -74,7 +76,7 @@ export class GameScene extends Phaser.Scene {
     this.fx = new FeedbackFX(this);
     this.milestones = new MilestoneDirector(this);
     this.joystick = new VirtualJoystick(this);
-    this.hud = new Hud(this, character.name);
+    this.hud = new Hud(this, character.name, !this.joystick.touchMode);
     this.levelUpUI = new LevelUpUI(this);
     this.resultUI = new ResultUI(this);
 
@@ -118,8 +120,17 @@ export class GameScene extends Phaser.Scene {
     if (this.ended) return;
 
     const time = this.time.now;
-    this.joystick.enabled = !this.levelUpUI.isOpen;
-    this.joystick.setVisible(!this.levelUpUI.isOpen);
+    if (this.joystick.touchMode) {
+      this.joystick.enabled = !this.levelUpUI.isOpen;
+      this.joystick.setVisible(!this.levelUpUI.isOpen);
+    }
+
+    const metaProg = boostProgress(
+      this.metaSnapshot,
+      this.player.character.id,
+      this.elapsedMs,
+      this.combat.kills,
+    );
 
     if (this.levelUpUI.isOpen) {
       this.hud.update(
@@ -127,6 +138,7 @@ export class GameScene extends Phaser.Scene {
         this.elapsedMs,
         this.combat.kills,
         this.enemies.aliveCount,
+        metaProg,
       );
       return;
     }
@@ -193,6 +205,7 @@ export class GameScene extends Phaser.Scene {
       this.elapsedMs,
       this.combat.kills,
       this.enemies.aliveCount,
+      metaProg,
     );
 
     this.checkEndConditions();
@@ -264,6 +277,7 @@ export class GameScene extends Phaser.Scene {
       this.elapsedMs,
       this.player.character.name,
       unlock,
+      won ? undefined : this.player.lastHurtCause,
     );
   }
 }

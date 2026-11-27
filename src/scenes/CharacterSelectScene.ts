@@ -3,7 +3,13 @@ import { audioDirector } from '../audio/AudioDirector';
 import { ASSET_KEYS } from '../config/assets';
 import { CHARACTERS, type CharacterId } from '../config/characters';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
-import { hasStarterBoost, hasTintSkin, loadMeta } from '../config/meta';
+import {
+  BOOST_KILL_TARGET,
+  BOOST_SURVIVE_MS,
+  hasStarterBoost,
+  hasTintSkin,
+  loadMeta,
+} from '../config/meta';
 
 export class CharacterSelectScene extends Phaser.Scene {
   private selected: CharacterId = 'knight';
@@ -47,6 +53,22 @@ export class CharacterSelectScene extends Phaser.Scene {
         fontSize: '13px',
         color: '#9fb0d0',
       })
+      .setOrigin(0.5, 0);
+
+    const boostUnlocked = this.meta.starterBoosts.length;
+    const tintUnlocked = this.meta.tintSkins.length;
+    const totalChars = CHARACTERS.length;
+    this.add
+      .text(
+        GAME_WIDTH / 2,
+        78,
+        `局外进度 · 起始强化 ${boostUnlocked}/${totalChars} · 金皮肤 ${tintUnlocked}/${totalChars} · 生涯击杀 ${this.meta.totalKills}`,
+        {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '12px',
+          color: '#c9b46a',
+        },
+      )
       .setOrigin(0.5, 0);
 
     const cardW = 200;
@@ -165,14 +187,21 @@ export class CharacterSelectScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const unlockBits: string[] = [];
-    if (hasStarterBoost(this.meta, id)) unlockBits.push('起始强化');
-    if (hasTintSkin(this.meta, id)) unlockBits.push('金皮肤');
+    if (hasStarterBoost(this.meta, id)) unlockBits.push('起始强化 ✓');
+    if (hasTintSkin(this.meta, id)) unlockBits.push('金皮肤 ✓');
     const unlockLabel = this.add
-      .text(0, 70, unlockBits.length > 0 ? unlockBits.join(' · ') : '未解锁局外加成', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '11px',
-        color: unlockBits.length > 0 ? '#ffe66d' : '#6f82a6',
-      })
+      .text(
+        0,
+        70,
+        unlockBits.length > 0
+          ? unlockBits.join(' · ')
+          : `未解锁 · 存活${Math.floor(BOOST_SURVIVE_MS / 60000)}分或击杀${BOOST_KILL_TARGET}`,
+        {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '11px',
+          color: unlockBits.length > 0 ? '#ffe66d' : '#6f82a6',
+        },
+      )
       .setOrigin(0.5);
     const tip = this.add
       .text(0, 92, `按 ${hotkey} 选择`, {
