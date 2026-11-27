@@ -7,6 +7,7 @@ import {
   type UpgradeDef,
   type UpgradeId,
 } from '../config/upgrades';
+import { UiMotion } from './UiMotion';
 
 export class LevelUpUI {
   private readonly root: Phaser.GameObjects.Container;
@@ -109,6 +110,32 @@ export class LevelUpUI {
       );
       this.cards.push(card);
       this.root.add(card);
+      card.setAlpha(0);
+      card.y += 40;
+      this.scene.tweens.add({
+        targets: card,
+        alpha: 1,
+        y: GAME_HEIGHT / 2 + 10,
+        delay: index * 80,
+        duration: 320,
+        ease: 'Back.easeOut',
+      });
+    });
+    // Title sparkle burst.
+    UiMotion.ensureAnims(this.scene);
+    const spark = this.scene.add
+      .sprite(GAME_WIDTH / 2, 70, 'ui_sparkle_sheet', 0)
+      .setScrollFactor(0)
+      .setDepth(210)
+      .setScale(1.2)
+      .play('ui_sparkle');
+    this.root.add(spark);
+    this.scene.tweens.add({
+      targets: spark,
+      alpha: 0,
+      scale: 1.8,
+      duration: 700,
+      onComplete: () => spark.destroy(),
     });
   }
 
@@ -171,8 +198,19 @@ export class LevelUpUI {
       })
       .setOrigin(0.5);
 
-    bg.on('pointerover', () => bg.setFillStyle(0x243556, 1));
-    bg.on('pointerout', () => bg.setFillStyle(0x1a2744, 0.95));
+    bg.on('pointerover', () => {
+      bg.setFillStyle(0x243556, 1);
+      this.scene.tweens.add({
+        targets: card,
+        scale: 1.05,
+        duration: 120,
+        ease: 'Back.easeOut',
+      });
+    });
+    bg.on('pointerout', () => {
+      bg.setFillStyle(0x1a2744, 0.95);
+      this.scene.tweens.add({ targets: card, scale: 1, duration: 120 });
+    });
     bg.on('pointerdown', () => this.choose(upgrade.id));
 
     children.push(title, desc);

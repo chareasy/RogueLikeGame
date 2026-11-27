@@ -9,6 +9,8 @@ import {
   ARENA_HALF,
   ARENA_SIZE,
   COLORS,
+  GAME_HEIGHT,
+  GAME_WIDTH,
   MATCH_DURATION_MS,
   PLAYER,
 } from '../config/constants';
@@ -26,6 +28,7 @@ import { Hud } from '../ui/Hud';
 import { LevelUpUI } from '../ui/LevelUpUI';
 import { PauseUI } from '../ui/PauseUI';
 import { ResultUI } from '../ui/ResultUI';
+import { UiMotion } from '../ui/UiMotion';
 import { VirtualJoystick } from '../ui/VirtualJoystick';
 
 export class GameScene extends Phaser.Scene {
@@ -68,8 +71,10 @@ export class GameScene extends Phaser.Scene {
     const character = getCharacter(characterId);
 
     this.cameras.main.setBackgroundColor(COLORS.bg);
+    this.cameras.main.fadeIn(320, 11, 16, 32);
     this.drawArena();
     this.arena = new ArenaMap(this);
+    UiMotion.ensureAnims(this);
 
     this.player = new Player(this, character);
     this.player.setArena(this.arena);
@@ -86,6 +91,22 @@ export class GameScene extends Phaser.Scene {
     this.resultUI = new ResultUI(this);
     this.pauseUI = new PauseUI(this, this.joystick.touchMode);
     this.pauseUI.muted = audioDirector.isMuted;
+
+    // Soft cinematic vignette (screen-space).
+    const vignette = this.add
+      .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'ui_combat_vignette')
+      .setDisplaySize(GAME_WIDTH * 1.05, GAME_HEIGHT * 1.05)
+      .setScrollFactor(0)
+      .setDepth(90)
+      .setAlpha(0.35);
+    this.tweens.add({
+      targets: vignette,
+      alpha: { from: 0.22, to: 0.4 },
+      duration: 2400,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
 
     this.cameras.main.startFollow(this.player.sprite, true, 0.12, 0.12);
     this.cameras.main.setBounds(

@@ -30,6 +30,24 @@ export const ASSET_KEYS = {
   } as Record<EnemyKind, string>,
 } as const;
 
+export const UI_ASSET_IMAGES: Array<{ key: string; path: string }> = [
+  { key: 'ui_menu_banner', path: 'assets/ui/ui_menu_banner.jpg' },
+  { key: 'ui_energy_emblem', path: 'assets/ui/ui_energy_emblem.jpg' },
+  { key: 'ui_combat_vignette', path: 'assets/ui/ui_combat_vignette.jpg' },
+];
+
+export const UI_SPRITESHEETS: Array<{
+  key: string;
+  path: string;
+  frameWidth: number;
+  frameHeight: number;
+}> = [
+  { key: 'ui_sparkle_sheet', path: 'assets/ui/fx_sparkle_sheet.png', frameWidth: 64, frameHeight: 64 },
+  { key: 'ui_xp_orb_sheet', path: 'assets/ui/fx_xp_orb_sheet.png', frameWidth: 48, frameHeight: 48 },
+  { key: 'ui_motes_sheet', path: 'assets/ui/fx_menu_motes_sheet.png', frameWidth: 128, frameHeight: 128 },
+  { key: 'ui_slash_sheet', path: 'assets/ui/fx_slash_sheet.png', frameWidth: 48, frameHeight: 48 },
+];
+
 export const ASSET_FILES: Array<{ key: string; path: string }> = [
   { key: ASSET_KEYS.characters.knight, path: 'assets/player_knight.png' },
   { key: ASSET_KEYS.characters.mage, path: 'assets/player_mage.png' },
