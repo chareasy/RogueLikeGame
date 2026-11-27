@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH, MATCH_DURATION_MS } from '../config/constants';
 import type { BoostProgress } from '../config/meta';
 import type { PlayerStats } from '../entities/PlayerStats';
+
 function formatTime(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const m = Math.floor(total / 60);
@@ -22,6 +23,7 @@ export class Hud {
   private readonly xpBarFg: Phaser.GameObjects.Rectangle;
   private readonly hpBarBg: Phaser.GameObjects.Rectangle;
   private readonly hpBarFg: Phaser.GameObjects.Rectangle;
+  private readonly moveHint: Phaser.GameObjects.Text;
   private readonly characterName: string;
   private readonly desktopHint: boolean;
   private targetHpWidth = 180;
@@ -32,6 +34,8 @@ export class Hud {
   private readonly bossBarFg: Phaser.GameObjects.Rectangle;
   private readonly bossLabel: Phaser.GameObjects.Text;
   private targetBossWidth = 0;
+  private readonly safeArrow: Phaser.GameObjects.Container;
+  private readonly safeArrowText: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene, characterName = '守望骑士', desktopHint = true) {
     this.characterName = characterName;
@@ -45,7 +49,7 @@ export class Hud {
 
     this.hpText = scene.add
       .text(20, 15, '', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '12px',
         color: COLORS.hud,
       })
@@ -53,7 +57,7 @@ export class Hud {
 
     this.levelText = scene.add
       .text(16, 50, '', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '14px',
         color: COLORS.hud,
       })
@@ -63,15 +67,16 @@ export class Hud {
     this.metaBarFg = scene.add.rectangle(16, 72, 0, 6, 0xffe66d, 1).setOrigin(0, 0);
     this.metaText = scene.add
       .text(16, 80, '', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '11px',
         color: '#c9b46a',
       })
       .setOrigin(0, 0);
 
+    // Timer stays alone on the top center band.
     this.timeText = scene.add
-      .text(GAME_WIDTH / 2, 14, '', {
-        fontFamily: 'Segoe UI, sans-serif',
+      .text(GAME_WIDTH / 2, 10, '', {
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '22px',
         color: COLORS.hud,
         fontStyle: 'bold',
@@ -80,7 +85,7 @@ export class Hud {
 
     this.killText = scene.add
       .text(GAME_WIDTH - 16, 16, '', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '14px',
         color: COLORS.hud,
       })
@@ -89,20 +94,21 @@ export class Hud {
     const moveHint = desktopHint
       ? 'WASD 移动 · 鼠标微调瞄准 · Esc 暂停 · 自动攻击'
       : '虚拟摇杆移动 · Esc 暂停 · 自动攻击';
-    const hint = scene.add
+    this.moveHint = scene.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT - 12, moveHint, {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '12px',
         color: '#9fb0d0',
       })
       .setOrigin(0.5, 1)
-      .setAlpha(0.7);
+      .setAlpha(0.75);
 
-    this.bossRoot = scene.add.container(GAME_WIDTH / 2, 46).setVisible(false);
+    // Boss bar sits under the timer so climax banners can live lower.
+    this.bossRoot = scene.add.container(GAME_WIDTH / 2, 38).setVisible(false);
     this.bossBarBg = scene.add.rectangle(0, 10, 320, 12, 0x000000, 0.55).setOrigin(0.5, 0);
     this.bossBarFg = scene.add.rectangle(-160, 10, 320, 12, 0xff6b6b, 1).setOrigin(0, 0);
     this.bossLabel = scene.add
-      .text(0, -4, 'BOSS', {
+      .text(0, -2, 'BOSS', {
         fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '12px',
         color: '#ff8a8a',
@@ -110,6 +116,18 @@ export class Hud {
       })
       .setOrigin(0.5, 1);
     this.bossRoot.add([this.bossBarBg, this.bossBarFg, this.bossLabel]);
+
+    this.safeArrowText = scene.add
+      .text(0, 0, '← 安全区', {
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
+        fontSize: '13px',
+        color: '#b8fff4',
+        backgroundColor: '#0b1020cc',
+        padding: { x: 8, y: 4 },
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    this.safeArrow = scene.add.container(0, 0, [this.safeArrowText]).setVisible(false);
 
     this.root.add([
       this.hpBarBg,
@@ -123,12 +141,21 @@ export class Hud {
       this.metaText,
       this.timeText,
       this.killText,
-      hint,
+      this.moveHint,
       this.bossRoot,
+      this.safeArrow,
     ]);
 
-    // Static HUD — no entrance bounce / pulsing chrome in combat.
     this.root.setAlpha(1);
+
+    // Fade permanent control strip after a short teach window.
+    scene.tweens.add({
+      targets: this.moveHint,
+      alpha: 0,
+      delay: 3200,
+      duration: 500,
+      onComplete: () => this.moveHint.setVisible(false),
+    });
 
     if (desktopHint) {
       this.showMouseAimTip(scene);
@@ -136,10 +163,9 @@ export class Hud {
   }
 
   private showMouseAimTip(scene: Phaser.Scene): void {
-    // Corner tip only — never covers the player / combat center.
     const tip = scene.add
       .text(GAME_WIDTH - 14, GAME_HEIGHT - 36, '鼠标可微调瞄准', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
         fontSize: '12px',
         color: '#9fb0d0',
         backgroundColor: '#0b1020aa',
@@ -171,16 +197,19 @@ export class Hud {
   ): void {
     const remain = MATCH_DURATION_MS - elapsedMs;
     this.timeText.setText(formatTime(remain));
-    // Low-time pulse.
     this.timeText.setColor(remain < 60_000 ? '#ff8a8a' : COLORS.hud);
     this.hpText.setText(`${Math.ceil(stats.hp)} / ${stats.maxHp}`);
     this.levelText.setText(`${this.characterName} · Lv.${stats.level}`);
-    const killTarget = meta && !meta.alreadyUnlocked ? meta.killTarget : 0;
-    this.killText.setText(
-      killTarget > 0
-        ? `击杀 ${kills}/${killTarget} · 场上 ${enemyCount}`
-        : `击杀 ${kills} · 场上 ${enemyCount}`,
-    );
+
+    if (!meta || meta.alreadyUnlocked) {
+      this.killText.setText(`击杀 ${kills} · 场上 ${enemyCount}`);
+    } else if (kills >= meta.killTarget) {
+      this.killText.setText(`击杀 ${kills} · 强化条件已达成 · 场上 ${enemyCount}`);
+      this.killText.setColor('#7cf29c');
+    } else {
+      this.killText.setText(`击杀 ${kills}/${meta.killTarget} · 场上 ${enemyCount}`);
+      this.killText.setColor(COLORS.hud);
+    }
 
     const hpRatio = Phaser.Math.Clamp(stats.hp / stats.maxHp, 0, 1);
     this.targetHpWidth = 180 * hpRatio;
@@ -202,11 +231,23 @@ export class Hud {
     this.xpBarFg.width += (this.targetXpWidth - this.xpBarFg.width) * 0.22;
 
     if (meta) {
-      this.metaText.setText(meta.label);
-      this.targetMetaWidth = 180 * Phaser.Math.Clamp(meta.ratio, 0, 1);
-      this.metaBarFg.width += (this.targetMetaWidth - this.metaBarFg.width) * 0.16;
-      this.metaBarFg.setFillStyle(meta.alreadyUnlocked ? 0x7cf29c : 0xffe66d, 1);
-      this.metaText.setColor(meta.alreadyUnlocked ? '#7cf29c' : '#c9b46a');
+      const done = meta.alreadyUnlocked || meta.ratio >= 1;
+      if (done) {
+        this.metaBarBg.setVisible(false);
+        this.metaBarFg.setVisible(false);
+        this.metaText.setText(
+          meta.alreadyUnlocked ? '起始强化已解锁' : '起始强化条件已达成',
+        );
+        this.metaText.setColor('#7cf29c');
+      } else {
+        this.metaBarBg.setVisible(true);
+        this.metaBarFg.setVisible(true);
+        this.metaText.setText(meta.label);
+        this.targetMetaWidth = 180 * Phaser.Math.Clamp(meta.ratio, 0, 1);
+        this.metaBarFg.width += (this.targetMetaWidth - this.metaBarFg.width) * 0.16;
+        this.metaBarFg.setFillStyle(0xffe66d, 1);
+        this.metaText.setColor('#c9b46a');
+      }
     }
 
     if (boss && boss.maxHp > 0) {
@@ -226,7 +267,19 @@ export class Hud {
     void this.desktopHint;
   }
 
-  /** Brief HP bar flash when the player takes damage (no position jitter). */
+  /** Edge cue when an active safe zone is off-screen. */
+  setSafeArrow(
+    visible: boolean,
+    screenX = 0,
+    screenY = 0,
+    label = '安全区',
+  ): void {
+    this.safeArrow.setVisible(visible);
+    if (!visible) return;
+    this.safeArrow.setPosition(screenX, screenY);
+    this.safeArrowText.setText(label);
+  }
+
   pulseHurt(): void {
     const scene = this.root.scene;
     scene.tweens.killTweensOf(this.hpBarFg);

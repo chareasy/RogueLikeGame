@@ -44,10 +44,25 @@ export class PauseUI {
       .setOrigin(0.5)
       .setScrollFactor(0);
 
+    const goal = scene.add
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2 - 148,
+        '本局目标：存活 ≥2 分钟 / 击杀 40 / 打赢 Boss',
+        {
+          fontFamily: '"Noto Sans SC", Segoe UI, sans-serif',
+          fontSize: '13px',
+          color: '#ffe66d',
+          align: 'center',
+        },
+      )
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+
     const controls = scene.add
       .text(
         GAME_WIDTH / 2,
-        GAME_HEIGHT / 2 - 138,
+        GAME_HEIGHT / 2 - 122,
         this.touchMode
           ? '操作：虚拟摇杆移动 · 自动攻击 · Esc 暂停'
           : '操作：WASD 移动 · 鼠标微调瞄准 · 自动攻击 · Esc 暂停 · M 静音',
@@ -103,6 +118,7 @@ export class PauseUI {
       dim,
       panel,
       title,
+      goal,
       controls,
       resume.bg,
       resume.label,
@@ -122,6 +138,7 @@ export class PauseUI {
       dim,
       panel,
       title,
+      goal,
       controls,
       resume.bg,
       resume.label,
