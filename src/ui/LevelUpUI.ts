@@ -110,6 +110,13 @@ export class LevelUpUI {
 
     this.currentChoices = pickUpgradeChoices(this.stacks, 3, this.characterId);
     const startX = GAME_WIDTH / 2 - (this.currentChoices.length - 1) * 140;
+    // Cap gold badges so "适合" stays a signal, not wallpaper.
+    const preferredIds = new Set(
+      this.currentChoices
+        .filter((u) => isPreferredUpgrade(this.characterId, u.id))
+        .slice(0, 2)
+        .map((u) => u.id),
+    );
     // Instant cards — no fly-in / sparkle that obscure choices.
     this.currentChoices.forEach((upgrade, index) => {
       const card = this.createCard(
@@ -117,6 +124,7 @@ export class LevelUpUI {
         startX + index * 280,
         GAME_HEIGHT / 2 + 10,
         index + 1,
+        preferredIds.has(upgrade.id),
       );
       this.cards.push(card);
       this.root.add(card);
@@ -128,8 +136,8 @@ export class LevelUpUI {
     x: number,
     y: number,
     hotkey: number,
+    preferred: boolean,
   ): Phaser.GameObjects.Container {
-    const preferred = isPreferredUpgrade(this.characterId, upgrade.id);
     const card = this.scene.add.container(x, y).setScrollFactor(0);
     const bg = this.scene.add
       .rectangle(0, 0, 240, preferred ? 188 : 168, 0x1a2744, 0.95)

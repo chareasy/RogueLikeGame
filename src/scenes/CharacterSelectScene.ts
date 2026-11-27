@@ -4,8 +4,6 @@ import { ASSET_KEYS } from '../config/assets';
 import { CHARACTERS, type CharacterId } from '../config/characters';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import {
-  BOOST_KILL_TARGET,
-  BOOST_SURVIVE_MS,
   hasStarterBoost,
   hasTintSkin,
   loadMeta,
@@ -201,8 +199,8 @@ export class CharacterSelectScene extends Phaser.Scene {
         0,
         70,
         unlockBits.length > 0
-          ? `可选用 · ${unlockBits.join(' · ')}`
-          : `可选用 · 起始强化未解锁（存活${Math.floor(BOOST_SURVIVE_MS / 60000)}分 / ${BOOST_KILL_TARGET}杀 / 胜）`,
+          ? unlockBits.join(' · ')
+          : `可玩 · 强化未解锁`,
         {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '11px',

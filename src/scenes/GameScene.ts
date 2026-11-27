@@ -107,6 +107,8 @@ export class GameScene extends Phaser.Scene {
       this.player.grantInvuln(this.time.now, 1400);
       this.shoveEnemiesFromPlayer(90);
       this.milestones.setUiMuted(false);
+      // Sweep gems that stacked while the world was frozen.
+      this.xpPool.magnetizeAll();
     };
     this.resultUI = new ResultUI(this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -137,9 +139,9 @@ export class GameScene extends Phaser.Scene {
       ARENA_SIZE + 80,
     );
 
-    // Melee kits open with fewer surrounds; clear kits keep a fuller pack.
-    const openChasers = character.spawnPressure < 1 ? 3 : 5;
-    const openSwarm = character.spawnPressure < 1 ? 1 : 2;
+    // Melee kits open a bit lighter; still enough on-screen to feel like mowing.
+    const openChasers = character.spawnPressure < 1 ? 5 : 7;
+    const openSwarm = character.spawnPressure < 1 ? 2 : 3;
     for (let i = 0; i < openChasers; i += 1) {
       this.enemies.spawnKind('chaser', 0, 0, 300 + i * 40);
     }
@@ -266,7 +268,7 @@ export class GameScene extends Phaser.Scene {
     const stick = this.joystick.vector;
     this.player.setStick(stick.x, stick.y);
     this.player.update(time, delta);
-    this.arena.update(time, delta, this.player);
+    this.arena.update(time, delta, this.player, this.elapsedMs);
     this.enemies.update(time, delta, this.elapsedMs, this.player);
     for (const enemy of this.enemies.enemies) {
       if (enemy.active) this.arena.resolveEnemy(enemy);
@@ -309,13 +311,13 @@ export class GameScene extends Phaser.Scene {
     // scaled by role spawnPressure (melee <1, mage/ranger >1).
     const alive = this.enemies.aliveCount;
     let bias = 1;
-    if (alive < 8) bias = 1.35;
-    else if (alive < 16) bias = 1.15;
-    else if (alive > 55) bias = 0.85;
-    // Opening window: further ease for melee / amplify for clear kits.
+    if (alive < 10) bias = 1.45;
+    else if (alive < 18) bias = 1.2;
+    else if (alive > 60) bias = 0.85;
+    // Opening window: mild ease for melee; clear kits refill faster.
     let openMul = 1;
     if (this.elapsedMs < 75_000) {
-      openMul = this.player.character.spawnPressure < 1 ? 0.78 : 1.05;
+      openMul = this.player.character.spawnPressure < 1 ? 0.92 : 1.12;
     }
     this.enemies.setDensityBias(bias * this.player.character.spawnPressure * openMul);
 

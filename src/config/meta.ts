@@ -105,7 +105,8 @@ export function boostProgress(
     kills: killProg,
     killTarget: BOOST_KILL_TARGET,
     ratio,
-    label: `起始强化 ${surviveSec}/${targetSec}秒 · 击杀 ${killProg}/${BOOST_KILL_TARGET}`,
+    // Survive-only label — kill count already lives in the top-right HUD.
+    label: `起始强化 ${surviveSec}/${targetSec}秒`,
   };
 }
 

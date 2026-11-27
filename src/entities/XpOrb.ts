@@ -7,6 +7,7 @@ export class XpOrb {
   y = 0;
   value = 1;
   magnetized = false;
+  private ageMs = 0;
 
   readonly graphic: Phaser.GameObjects.Image;
 
@@ -24,6 +25,7 @@ export class XpOrb {
     this.y = y;
     this.value = value;
     this.magnetized = false;
+    this.ageMs = 0;
     this.graphic.setPosition(x, y);
     this.graphic.setVisible(true);
     this.graphic.setActive(true);
@@ -41,6 +43,7 @@ export class XpOrb {
     magnetBoost = false,
   ): number {
     if (!this.active) return 0;
+    this.ageMs += delta;
 
     const dx = px - this.x;
     const dy = py - this.y;
@@ -51,11 +54,12 @@ export class XpOrb {
       return this.value;
     }
 
-    // Soft pull starts earlier than hard pickup; kills also force magnetize.
-    const softRadius = pickupRadius * (magnetBoost ? 2.8 : 1.65);
+    // Soft pull starts earlier; stranded gems auto-home after ~2s.
+    const softRadius = pickupRadius * (magnetBoost ? 2.8 : 1.85);
+    if (this.ageMs >= 2000) this.magnetized = true;
     if (dist <= softRadius || this.magnetized || magnetBoost) {
       this.magnetized = true;
-      const base = magnetBoost ? 520 : 360;
+      const base = magnetBoost || this.ageMs >= 2000 ? 560 : 380;
       const speed = base + Math.max(0, softRadius - dist) * 2.2;
       const nx = dx / (dist || 1);
       const ny = dy / (dist || 1);

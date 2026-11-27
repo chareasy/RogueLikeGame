@@ -13,25 +13,25 @@ export interface SpawnWave {
 
 export const SPAWN_TIMELINE: SpawnWave[] = [
   {
-    // Soft open: give players room to learn controls / first upgrades.
+    // Soft contact damage stays; restore on-screen density for "mowing" feel.
     fromMs: 0,
     toMs: 30_000,
-    intervalMs: 720,
-    softCap: 22,
-    weights: { chaser: 3, swarm: 1 },
+    intervalMs: 520,
+    softCap: 34,
+    weights: { chaser: 3, swarm: 2 },
   },
   {
     fromMs: 30_000,
     toMs: 75_000,
-    intervalMs: 560,
-    softCap: 42,
+    intervalMs: 420,
+    softCap: 55,
     weights: { chaser: 3, swarm: 2, speeder: 1 },
   },
   {
     fromMs: 75_000,
     toMs: 150_000,
-    intervalMs: 400,
-    softCap: 80,
+    intervalMs: 360,
+    softCap: 90,
     weights: { chaser: 3, speeder: 2, swarm: 3 },
     eliteEveryMs: 55_000,
   },

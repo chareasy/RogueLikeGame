@@ -4,7 +4,12 @@ import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
 
 export type Rock = { x: number; y: number; radius: number };
-export type Pool = { x: number; y: number; radius: number };
+export type Pool = {
+  x: number;
+  y: number;
+  radius: number;
+  label: Phaser.GameObjects.Text;
+};
 export type SafeZone = {
   x: number;
   y: number;
@@ -115,8 +120,7 @@ export class ArenaMap {
       [550, -200, 72],
     ];
     for (const [x, y, r] of poisonSpots) {
-      this.poisons.push({ x, y, radius: r });
-      this.scene.add
+      const label = this.scene.add
         .text(x, y, '☠ 毒', {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '16px',
@@ -127,9 +131,10 @@ export class ArenaMap {
         })
         .setOrigin(0.5)
         .setDepth(3)
-        .setAlpha(0.85);
+        .setAlpha(0.35);
+      this.poisons.push({ x, y, radius: r, label });
     }
-    this.redrawPoisons(0);
+    this.redrawPoisons(0, 0);
 
     // Safe zones are milestone-driven (no silent random pulse).
     const safeSpots: Array<[number, number, number]> = [
@@ -238,18 +243,23 @@ export class ArenaMap {
     });
   }
 
-  private redrawPoisons(time: number): void {
+  private redrawPoisons(time: number, elapsedMs: number): void {
     this.poisonGfx.clear();
+    // First ~75s: quieter rings so hazards don't own the opening shot.
+    const early = elapsedMs < 75_000;
+    const fillA = early ? 0.1 : 0.22;
+    const innerA = early ? 0.14 : 0.3;
+    const strokeA = early ? 0.35 : 0.7 + Math.sin(time / 200) * 0.15;
     for (const p of this.poisons) {
-      // Outer danger ring + inner toxic fill — distinct from safe cyan.
-      this.poisonGfx.fillStyle(0x5a3d8b, 0.22);
+      this.poisonGfx.fillStyle(0x5a3d8b, fillA);
       this.poisonGfx.fillCircle(p.x, p.y, p.radius);
-      this.poisonGfx.fillStyle(0x6fb84a, 0.3);
+      this.poisonGfx.fillStyle(0x6fb84a, innerA);
       this.poisonGfx.fillCircle(p.x, p.y, p.radius * 0.72);
-      this.poisonGfx.lineStyle(3, 0xc8ff6a, 0.7 + Math.sin(time / 200) * 0.15);
+      this.poisonGfx.lineStyle(early ? 2 : 3, 0xc8ff6a, strokeA);
       this.poisonGfx.strokeCircle(p.x, p.y, p.radius);
-      this.poisonGfx.lineStyle(2, 0x9b59b6, 0.55);
+      this.poisonGfx.lineStyle(2, 0x9b59b6, early ? 0.28 : 0.55);
       this.poisonGfx.strokeCircle(p.x, p.y, p.radius * 0.72);
+      p.label.setAlpha(early ? 0.35 : 0.85);
     }
   }
 
@@ -292,11 +302,13 @@ export class ArenaMap {
     });
   }
 
-  update(time: number, delta: number, player: Player): void {
-    this.redrawPoisons(time);
+  update(time: number, delta: number, player: Player, elapsedMs = 0): void {
+    this.redrawPoisons(time, elapsedMs);
 
     this.bubbleAcc += delta;
-    if (this.bubbleAcc >= 220) {
+    // Fewer bubbles early so the field stays readable.
+    const bubbleEvery = elapsedMs < 75_000 ? 520 : 220;
+    if (this.bubbleAcc >= bubbleEvery) {
       this.bubbleAcc = 0;
       for (const p of this.poisons) this.spawnBubble(p.x, p.y, p.radius);
     }
@@ -327,14 +339,15 @@ export class ArenaMap {
     }
     this.wasInPoison = inPoison;
 
-    // Poison DoT.
+    // Poison DoT — soft for the opening minute, then full tick.
     this.poisonTickAcc += delta;
-    if (this.poisonTickAcc >= 400) {
+    const poisonInterval = elapsedMs < 60_000 ? 700 : 400;
+    const poisonDmg = elapsedMs < 60_000 ? 2 : 4;
+    if (this.poisonTickAcc >= poisonInterval) {
       this.poisonTickAcc = 0;
       if (inPoison) {
-        player.tryHurt(4, time, 'poison');
+        player.tryHurt(poisonDmg, time, 'poison');
         this.floatHint(player.x, player.y - 6, '-毒', '#d6ff9a');
-        // Brief green flash without wiping meta skin tint permanently.
         const prevAlpha = player.sprite.alpha;
         player.sprite.setAlpha(0.55);
         this.scene.time.delayedCall(100, () => {

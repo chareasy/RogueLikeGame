@@ -155,7 +155,12 @@ export class Hud {
     this.timeText.setColor(remain < 60_000 ? '#ff8a8a' : COLORS.hud);
     this.hpText.setText(`${Math.ceil(stats.hp)} / ${stats.maxHp}`);
     this.levelText.setText(`${this.characterName} · Lv.${stats.level}`);
-    this.killText.setText(`击杀 ${kills} · 场上 ${enemyCount}`);
+    const killTarget = meta && !meta.alreadyUnlocked ? meta.killTarget : 0;
+    this.killText.setText(
+      killTarget > 0
+        ? `击杀 ${kills}/${killTarget} · 场上 ${enemyCount}`
+        : `击杀 ${kills} · 场上 ${enemyCount}`,
+    );
 
     const hpRatio = Phaser.Math.Clamp(stats.hp / stats.maxHp, 0, 1);
     this.targetHpWidth = 180 * hpRatio;
