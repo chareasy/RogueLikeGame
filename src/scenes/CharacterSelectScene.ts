@@ -8,6 +8,7 @@ import {
   hasTintSkin,
   loadMeta,
 } from '../config/meta';
+
 export class CharacterSelectScene extends Phaser.Scene {
   private selected: CharacterId = 'knight';
   private cards: Phaser.GameObjects.Container[] = [];
@@ -40,7 +41,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     this.add
       .text(GAME_WIDTH / 2, 22, '选择角色', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
         fontSize: '28px',
         color: '#4fd1c5',
         fontStyle: 'bold',
@@ -49,7 +50,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     this.add
       .text(GAME_WIDTH / 2, 56, '点击卡片 / 按 1–4 选择 · Enter / 空格确认出发', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
         fontSize: '13px',
         color: '#9fb0d0',
       })
@@ -64,7 +65,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         78,
         `局外进度 · 起始强化 ${boostUnlocked}/${totalChars} · 金皮肤 ${tintUnlocked}/${totalChars} · 生涯击杀 ${this.meta.totalKills}`,
         {
-          fontFamily: 'Segoe UI, sans-serif',
+          fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
           fontSize: '12px',
           color: '#c9b46a',
         },
@@ -76,28 +77,28 @@ export class CharacterSelectScene extends Phaser.Scene {
     const totalW = CHARACTERS.length * cardW + (CHARACTERS.length - 1) * gap;
     const startX = (GAME_WIDTH - totalW) / 2 + cardW / 2;
     CHARACTERS.forEach((hero, index) => {
-      const card = this.createCard(hero.id, startX + index * (cardW + gap), 230, cardW, index + 1);
+      const card = this.createCard(hero.id, startX + index * (cardW + gap), 220, cardW, index + 1);
       this.cards.push(card);
     });
-    // Instant cards — no multi-second stagger that leaves the roster empty.
 
     this.detailText = this.add
-      .text(GAME_WIDTH / 2, 380, '', {
-        fontFamily: 'Segoe UI, sans-serif',
+      .text(GAME_WIDTH / 2, 360, '', {
+        fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
         fontSize: '14px',
         color: '#e8eefc',
         align: 'center',
         wordWrap: { width: 820 },
+        lineSpacing: 4,
       })
       .setOrigin(0.5, 0);
 
     this.startBtn = this.add
-      .rectangle(GAME_WIDTH / 2, 490, 240, 52, 0x4fd1c5, 1)
+      .rectangle(GAME_WIDTH / 2, 500, 240, 52, 0x4fd1c5, 1)
       .setInteractive({ useHandCursor: true })
       .setStrokeStyle(2, 0xb8fff4, 0.85);
     this.add
-      .text(GAME_WIDTH / 2, 490, '确认出发', {
-        fontFamily: 'Segoe UI, sans-serif',
+      .text(GAME_WIDTH / 2, 500, '确认出发', {
+        fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
         fontSize: '18px',
         color: '#0b1020',
         fontStyle: 'bold',
@@ -126,7 +127,6 @@ export class CharacterSelectScene extends Phaser.Scene {
       };
       bind('ENTER', start);
       bind('SPACE', start);
-      // Phaser key names are ONE/TWO/... not "1"/"2".
       const digitKeys = ['ONE', 'TWO', 'THREE', 'FOUR'] as const;
       CHARACTERS.forEach((hero, index) => {
         const key = digitKeys[index];
@@ -154,10 +154,9 @@ export class CharacterSelectScene extends Phaser.Scene {
     hotkey: number,
   ): Phaser.GameObjects.Container {
     const hero = CHARACTERS.find((c) => c.id === id)!;
-    const height = 250;
+    const height = 220;
     const root = this.add.container(x, y);
 
-    // Large hit area covering the whole card.
     const hit = this.add
       .rectangle(0, 0, width, height, 0x1a2744, 0.95)
       .setStrokeStyle(2, 0x3a4f73, 1)
@@ -165,54 +164,39 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     const keyBadge = this.add
       .text(-width / 2 + 14, -height / 2 + 10, String(hotkey), {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
         fontSize: '14px',
         color: '#7eeae0',
         fontStyle: 'bold',
       })
       .setOrigin(0, 0);
 
-    const portrait = this.add.image(0, -52, hero.assetKey).setDisplaySize(88, 88);
+    const portrait = this.add.image(0, -40, hero.assetKey).setDisplaySize(96, 96);
     if (hasTintSkin(this.meta, id)) portrait.setTint(0xffe0a3);
 
     const name = this.add
-      .text(0, 22, hero.name, {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '16px',
+      .text(0, 36, hero.name, {
+        fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
+        fontSize: '18px',
         color: hero.accent,
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
     const title = this.add
-      .text(0, 46, hero.title, {
-        fontFamily: 'Segoe UI, sans-serif',
+      .text(0, 58, hero.title, {
+        fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
         fontSize: '12px',
         color: '#9fb0d0',
       })
       .setOrigin(0.5);
 
-    const unlockBits: string[] = [];
-    if (hasStarterBoost(this.meta, id)) unlockBits.push('起始强化 ✓');
-    if (hasTintSkin(this.meta, id)) unlockBits.push('金皮肤 ✓');
-    const unlockLabel = this.add
-      .text(
-        0,
-        70,
-        unlockBits.length > 0
-          ? unlockBits.join(' · ')
-          : `可玩 · 强化未解锁`,
-        {
-          fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '11px',
-          color: unlockBits.length > 0 ? '#ffe66d' : '#6f82a6',
-        },
-      )
-      .setOrigin(0.5);
-    const tip = this.add
-      .text(0, 92, `按 ${hotkey} 选择`, {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '11px',
-        color: '#6f82a6',
+    // One status line on the card; unlock details live in the panel below.
+    const status = cardStatusLine(this.meta, id);
+    const statusLabel = this.add
+      .text(0, 84, status.text, {
+        fontFamily: '"Noto Sans SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        color: status.color,
       })
       .setOrigin(0.5);
 
@@ -224,7 +208,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       if (this.selected !== id) hit.setFillStyle(0x1a2744, 0.95);
     });
 
-    root.add([hit, keyBadge, portrait, name, title, unlockLabel, tip]);
+    root.add([hit, keyBadge, portrait, name, title, statusLabel]);
     root.setData('id', id);
     root.setData('bg', hit);
     root.setData('portrait', portrait);
@@ -258,6 +242,18 @@ export class CharacterSelectScene extends Phaser.Scene {
       `${hero.description}\n生命 ${hero.maxHp} · 移速 ${hero.speed} · 伤害 ${hero.damage} · 主武器 ${weaponLabel(hero.primaryWeapon)}\n该角色始终可选用\n${boost}\n${tint}`,
     );
   }
+}
+
+function cardStatusLine(
+  meta: ReturnType<typeof loadMeta>,
+  id: CharacterId,
+): { text: string; color: string } {
+  const boost = hasStarterBoost(meta, id);
+  const tint = hasTintSkin(meta, id);
+  if (boost && tint) return { text: '已强化 · 金皮肤', color: '#ffe66d' };
+  if (boost) return { text: '已强化', color: '#ffe66d' };
+  if (tint) return { text: '金皮肤', color: '#ffe66d' };
+  return { text: '可玩', color: '#6f82a6' };
 }
 
 function weaponLabel(kind: string): string {

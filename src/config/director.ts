@@ -19,6 +19,8 @@ export const SPAWN_TIMELINE: SpawnWave[] = [
     intervalMs: 520,
     softCap: 34,
     weights: { chaser: 3, swarm: 2 },
+    // Outer ring packs — pressure without stacking on the player.
+    formationEveryMs: 14_000,
   },
   {
     fromMs: 30_000,
@@ -26,6 +28,7 @@ export const SPAWN_TIMELINE: SpawnWave[] = [
     intervalMs: 420,
     softCap: 55,
     weights: { chaser: 3, swarm: 2, speeder: 1 },
+    formationEveryMs: 12_000,
   },
   {
     fromMs: 75_000,
@@ -34,6 +37,7 @@ export const SPAWN_TIMELINE: SpawnWave[] = [
     softCap: 90,
     weights: { chaser: 3, speeder: 2, swarm: 3 },
     eliteEveryMs: 55_000,
+    formationEveryMs: 11_000,
   },
   {
     // 2.5–5 min: introduce flank / summon / shield elites.

@@ -4,6 +4,9 @@ import { ASSET_KEYS } from '../config/assets';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import { loadMeta } from '../config/meta';
 
+const TITLE_FONT = '"ZCOOL XiaoWei", "Noto Serif SC", serif';
+const UI_FONT = '"Noto Sans SC", "Segoe UI", sans-serif';
+
 export class MenuScene extends Phaser.Scene {
   constructor() {
     super('MenuScene');
@@ -13,76 +16,133 @@ export class MenuScene extends Phaser.Scene {
     document.body.classList.remove('in-combat');
     audioDirector.attach(this);
     this.cameras.main.setBackgroundColor(COLORS.bg);
-    this.cameras.main.fadeIn(280, 11, 16, 32);
+    this.cameras.main.fadeIn(320, 11, 16, 32);
 
-    this.add
+    // Full-bleed hero plane — brand lives on the image, not in chrome.
+    const heroBg = this.add
       .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, ASSET_KEYS.menuBg)
-      .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
-      .setAlpha(0.78);
+      .setDisplaySize(GAME_WIDTH * 1.06, GAME_HEIGHT * 1.06)
+      .setAlpha(0.92);
 
+    // Soft bottom wash so CTA stays readable without boxing the brand.
     this.add
-      .image(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, 'ui_menu_banner')
-      .setDisplaySize(GAME_WIDTH * 0.92, GAME_HEIGHT * 0.62)
-      .setAlpha(0.38);
-
-    this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050814, 0.42)
-      .setScrollFactor(0);
-
-    this.add
-      .image(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 150, 'ui_energy_emblem')
-      .setDisplaySize(72, 72)
-      .setAlpha(0.88);
-
-    this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 90, '割草幸存者', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '52px',
-        color: '#4fd1c5',
-        fontStyle: 'bold',
-        stroke: '#0b1020',
-        strokeThickness: 8,
-      })
-      .setOrigin(0.5);
-
-    this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 28, '多角色 · 多武器技能 · 更丰富怪潮', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '16px',
-        color: '#d7e2f7',
-        stroke: '#0b1020',
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5);
-
-    const meta = loadMeta();
-    this.add
-      .text(
+      .rectangle(
         GAME_WIDTH / 2,
-        GAME_HEIGHT / 2 + 8,
-        `局外进度  场次 ${meta.runs} · 胜场 ${meta.wins} · 最高击杀 ${meta.bestKills} · 强化 ${meta.starterBoosts.length}/4 · 皮肤 ${meta.tintSkins.length}/4`,
-        {
-          fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '13px',
-          color: '#ffe66d',
-          stroke: '#0b1020',
-          strokeThickness: 3,
-        },
+        GAME_HEIGHT * 0.72,
+        GAME_WIDTH,
+        GAME_HEIGHT * 0.56,
+        0x050814,
+        0.55,
       )
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
+
+    const brand = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.34, '割草幸存者', {
+        fontFamily: TITLE_FONT,
+        fontSize: '64px',
+        color: '#e8eefc',
+        stroke: '#0b1020',
+        strokeThickness: 10,
+      })
+      .setOrigin(0.5)
+      .setAlpha(0);
+
+    const tagline = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.34 + 58, '多角色清怪 · 技能成长 · 怪潮升级', {
+        fontFamily: UI_FONT,
+        fontSize: '16px',
+        color: '#c5d0e6',
+        stroke: '#0b1020',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setAlpha(0);
+
+    const accent = this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.34 + 86, 72, 3, 0x4fd1c5, 0.9)
+      .setAlpha(0);
 
     const btn = this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 72, 228, 54, 0x4fd1c5, 1)
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.72, 240, 56, 0x4fd1c5, 1)
       .setInteractive({ useHandCursor: true })
-      .setStrokeStyle(2, 0xb8fff4, 0.9);
+      .setStrokeStyle(2, 0xb8fff4, 0.9)
+      .setAlpha(0);
     const btnText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 72, '选择角色', {
-        fontFamily: 'Segoe UI, sans-serif',
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.72, '选择角色', {
+        fontFamily: UI_FONT,
         fontSize: '20px',
         color: '#0b1020',
         fontStyle: 'bold',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setAlpha(0);
+
+    const meta = loadMeta();
+    const metaLine = this.add
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT - 48,
+        `场次 ${meta.runs} · 胜场 ${meta.wins} · 最高击杀 ${meta.bestKills} · 强化 ${meta.starterBoosts.length}/4 · 皮肤 ${meta.tintSkins.length}/4`,
+        {
+          fontFamily: UI_FONT,
+          fontSize: '12px',
+          color: '#9fb0d0',
+          stroke: '#0b1020',
+          strokeThickness: 3,
+        },
+      )
+      .setOrigin(0.5)
+      .setAlpha(0);
+
+    const hint = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 24, '点击或按键开启音效 · Enter / 空格继续', {
+        fontFamily: UI_FONT,
+        fontSize: '11px',
+        color: '#6f82a6',
+        stroke: '#0b1020',
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5)
+      .setAlpha(0);
+
+    // Intentional presence: slow hero drift + staggered reveal (no blocking loops).
+    this.tweens.add({
+      targets: heroBg,
+      scaleX: heroBg.scaleX * 1.04,
+      scaleY: heroBg.scaleY * 1.04,
+      duration: 14000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    this.tweens.add({
+      targets: brand,
+      alpha: 1,
+      y: brand.y - 6,
+      duration: 520,
+      ease: 'Cubic.easeOut',
+    });
+    this.tweens.add({
+      targets: [tagline, accent],
+      alpha: 1,
+      duration: 420,
+      delay: 180,
+      ease: 'Cubic.easeOut',
+    });
+    this.tweens.add({
+      targets: [btn, btnText],
+      alpha: 1,
+      duration: 380,
+      delay: 320,
+      ease: 'Cubic.easeOut',
+    });
+    this.tweens.add({
+      targets: [metaLine, hint],
+      alpha: 1,
+      duration: 360,
+      delay: 480,
+      ease: 'Cubic.easeOut',
+    });
 
     const unlockAndStart = () => {
       audioDirector.unlock();
@@ -107,18 +167,6 @@ export class MenuScene extends Phaser.Scene {
 
     this.input.keyboard?.once('keydown-ENTER', unlockAndStart);
     this.input.keyboard?.once('keydown-SPACE', unlockAndStart);
-
-    this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 28, '点击或按键开启音效 · Enter / 空格继续', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '12px',
-        color: '#c5d0e6',
-        stroke: '#0b1020',
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5);
-
-    void btnText;
   }
 
   update(_time: number, delta: number): void {

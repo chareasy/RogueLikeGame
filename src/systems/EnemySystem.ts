@@ -250,7 +250,12 @@ export class EnemySystem {
       elapsedMs - this.lastFormationAt >= wave.formationEveryMs
     ) {
       this.lastFormationAt = elapsedMs;
-      this.spawnFlankFormation(player.x, player.y);
+      // Early: soft outer ring (pressure without pile-on). Late: flank pack.
+      if (elapsedMs < 150_000) {
+        this.spawnRing('chaser', player.x, player.y, 5, 310);
+      } else {
+        this.spawnFlankFormation(player.x, player.y);
+      }
     }
 
     const softCap = Math.floor(wave.softCap * this.densityBias);
@@ -263,6 +268,33 @@ export class EnemySystem {
       if (this.aliveCount >= Math.min(softCap, this.maxEnemies)) break;
       const kind = pickWeightedKind(wave.weights);
       this.spawnKind(kind, player.x, player.y, 280 + Math.random() * 160);
+    }
+  }
+
+  /** Even ring around a point — density without random close spawns. */
+  spawnRing(
+    kind: EnemyKind,
+    px: number,
+    py: number,
+    count: number,
+    radius: number,
+  ): void {
+    for (let i = 0; i < count; i += 1) {
+      const a = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.12;
+      const dist = radius + (Math.random() - 0.5) * 28;
+      const x = Phaser.Math.Clamp(
+        px + Math.cos(a) * dist,
+        -ARENA_HALF + 30,
+        ARENA_HALF - 30,
+      );
+      const y = Phaser.Math.Clamp(
+        py + Math.sin(a) * dist,
+        -ARENA_HALF + 30,
+        ARENA_HALF - 30,
+      );
+      const enemy = this.enemies.find((e) => !e.active);
+      if (!enemy) break;
+      enemy.spawn(kind, x, y);
     }
   }
 

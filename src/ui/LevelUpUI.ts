@@ -49,11 +49,16 @@ export class LevelUpUI {
       .setScrollFactor(0);
 
     this.hint = scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 36, '按 1 / 2 / 3 选择 · 金色角标=适合当前角色 · 前几次偏本职', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '13px',
-        color: '#9fb0d0',
-      })
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT - 36,
+        '按 1 / 2 / 3 选择 · 金描边=适合当前角色 · 前几次偏本职',
+        {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '13px',
+          color: '#9fb0d0',
+        },
+      )
       .setOrigin(0.5)
       .setScrollFactor(0);
 
@@ -110,7 +115,7 @@ export class LevelUpUI {
 
     this.currentChoices = pickUpgradeChoices(this.stacks, 3, this.characterId);
     const startX = GAME_WIDTH / 2 - (this.currentChoices.length - 1) * 140;
-    // Cap gold badges so "适合" stays a signal, not wallpaper.
+    // Cap preferred outline so "适合" stays a signal, not wallpaper.
     const preferredIds = new Set(
       this.currentChoices
         .filter((u) => isPreferredUpgrade(this.characterId, u.id))
@@ -139,50 +144,35 @@ export class LevelUpUI {
     preferred: boolean,
   ): Phaser.GameObjects.Container {
     const card = this.scene.add.container(x, y).setScrollFactor(0);
+    // Soft gold outline instead of filled "适合" chips.
     const bg = this.scene.add
-      .rectangle(0, 0, 240, preferred ? 188 : 168, 0x1a2744, 0.95)
-      .setStrokeStyle(2, preferred ? 0xffe66d : 0x4fd1c5, preferred ? 1 : 0.9)
+      .rectangle(0, 0, 240, 168, 0x1a2744, 0.95)
+      .setStrokeStyle(preferred ? 3 : 2, preferred ? 0xc9b46a : 0x4fd1c5, preferred ? 0.7 : 0.9)
       .setScrollFactor(0)
       .setInteractive({ useHandCursor: true });
 
     const keyBadge = this.scene.add
-      .text(-100, preferred ? -76 : -66, String(hotkey), {
+      .text(-100, -66, String(hotkey), {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '16px',
         color: '#0b1020',
-        backgroundColor: preferred ? '#ffe66d' : '#4fd1c5',
+        backgroundColor: preferred ? '#c9b46a' : '#4fd1c5',
         padding: { x: 8, y: 2 },
       })
       .setOrigin(0, 0);
 
-    const children: Phaser.GameObjects.GameObject[] = [bg, keyBadge];
-
-    if (preferred) {
-      const badge = this.scene.add
-        .text(0, -72, '适合当前角色', {
-          fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '12px',
-          color: '#0b1020',
-          backgroundColor: '#ffe66d',
-          padding: { x: 8, y: 3 },
-          fontStyle: 'bold',
-        })
-        .setOrigin(0.5);
-      children.push(badge);
-    }
-
     const title = this.scene.add
-      .text(0, preferred ? -28 : -40, upgrade.title, {
+      .text(0, -40, upgrade.title, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '20px',
-        color: preferred ? '#ffe66d' : '#4fd1c5',
+        color: preferred ? '#e8d48a' : '#4fd1c5',
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
 
     const stack = this.stacks?.[upgrade.id] ?? 0;
     const desc = this.scene.add
-      .text(0, preferred ? 28 : 20, `${upgrade.description}\n当前层数 ${stack}/${upgrade.maxStacks}`, {
+      .text(0, 20, `${upgrade.description}\n当前层数 ${stack}/${upgrade.maxStacks}`, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '14px',
         color: '#d7e2f7',
@@ -201,8 +191,7 @@ export class LevelUpUI {
     });
     bg.on('pointerdown', () => this.choose(upgrade.id));
 
-    children.push(title, desc);
-    card.add(children);
+    card.add([bg, keyBadge, title, desc]);
     pinToScreen(card);
     return card;
   }
@@ -229,7 +218,6 @@ export class LevelUpUI {
     this.clearCards();
     this.open = false;
     this.root.setVisible(false);
-    this.pendingLevels = 0;
     if (wasOpen) this.onClose?.();
   }
 }

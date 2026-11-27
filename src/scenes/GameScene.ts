@@ -139,15 +139,11 @@ export class GameScene extends Phaser.Scene {
       ARENA_SIZE + 80,
     );
 
-    // Melee kits open a bit lighter; still enough on-screen to feel like mowing.
+    // Opening ring — on-screen density without random face-hugs.
     const openChasers = character.spawnPressure < 1 ? 5 : 7;
     const openSwarm = character.spawnPressure < 1 ? 2 : 3;
-    for (let i = 0; i < openChasers; i += 1) {
-      this.enemies.spawnKind('chaser', 0, 0, 300 + i * 40);
-    }
-    for (let i = 0; i < openSwarm; i += 1) {
-      this.enemies.spawnKind('swarm', 0, 0, 360 + i * 32);
-    }
+    this.enemies.spawnRing('chaser', 0, 0, openChasers, 340);
+    this.enemies.spawnRing('swarm', 0, 0, openSwarm, 400);
 
     this.bindPauseKeys();
   }
