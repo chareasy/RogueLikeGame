@@ -5,8 +5,13 @@ export type EnemyKind =
   | 'tank'
   | 'swarm'
   | 'charger'
+  | 'flanker'
+  | 'summoner'
+  | 'shield_elite'
   | 'elite'
   | 'boss';
+
+export type EnemyBehavior = 'chase' | 'flank' | 'summon' | 'shield' | 'boss';
 
 export interface EnemyDef {
   kind: EnemyKind;
@@ -25,6 +30,13 @@ export interface EnemyDef {
   dashCooldownMs?: number;
   dashSpeed?: number;
   dashDurationMs?: number;
+  behavior?: EnemyBehavior;
+  /** Summoner: interval between swarm bursts. */
+  summonCooldownMs?: number;
+  /** Shield elite: half-angle (rad) of frontal block. */
+  shieldHalfAngle?: number;
+  /** Texture remap when reusing existing sprites. */
+  textureKey?: EnemyKind;
 }
 
 export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
@@ -95,6 +107,48 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     dashSpeed: 260,
     dashDurationMs: 420,
   },
+  flanker: {
+    kind: 'flanker',
+    radius: 11,
+    speed: 105,
+    hp: 20,
+    damage: 7,
+    xp: 4,
+    color: 0x4fd1c5,
+    touchCooldownMs: 480,
+    behavior: 'flank',
+    textureKey: 'speeder',
+  },
+  summoner: {
+    kind: 'summoner',
+    radius: 16,
+    speed: 48,
+    hp: 70,
+    damage: 8,
+    xp: 10,
+    color: 0xc77dff,
+    touchCooldownMs: 650,
+    keepDistance: 260,
+    shootCooldownMs: 2200,
+    projectileDamage: 9,
+    projectileSpeed: 160,
+    behavior: 'summon',
+    summonCooldownMs: 5200,
+    textureKey: 'shooter',
+  },
+  shield_elite: {
+    kind: 'shield_elite',
+    radius: 22,
+    speed: 58,
+    hp: 260,
+    damage: 15,
+    xp: 32,
+    color: 0x5dade2,
+    touchCooldownMs: 600,
+    behavior: 'shield',
+    shieldHalfAngle: Math.PI * 0.55,
+    textureKey: 'elite',
+  },
   elite: {
     kind: 'elite',
     radius: 22,
@@ -118,5 +172,9 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     shootCooldownMs: 1200,
     projectileDamage: 14,
     projectileSpeed: 200,
+    behavior: 'boss',
+    dashCooldownMs: 4200,
+    dashSpeed: 240,
+    dashDurationMs: 480,
   },
 };

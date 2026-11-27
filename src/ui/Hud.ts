@@ -80,8 +80,8 @@ export class Hud {
       .setOrigin(1, 0);
 
     const moveHint = desktopHint
-      ? 'WASD 移动 · 鼠标微调瞄准 · 自动攻击'
-      : '虚拟摇杆移动 · 自动攻击';
+      ? 'WASD 移动 · 鼠标微调瞄准 · Esc 暂停 · 自动攻击'
+      : '虚拟摇杆移动 · Esc 暂停 · 自动攻击';
     const hint = scene.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT - 12, moveHint, {
         fontFamily: 'Segoe UI, sans-serif',

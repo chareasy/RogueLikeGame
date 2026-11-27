@@ -7,6 +7,8 @@ export interface SpawnWave {
   softCap: number;
   weights: Partial<Record<EnemyKind, number>>;
   eliteEveryMs?: number;
+  /** Mid-run formation pack interval (flank surround). */
+  formationEveryMs?: number;
 }
 
 export const SPAWN_TIMELINE: SpawnWave[] = [
@@ -26,12 +28,23 @@ export const SPAWN_TIMELINE: SpawnWave[] = [
     eliteEveryMs: 55_000,
   },
   {
+    // 2.5–5 min: introduce flank / summon / shield elites.
     fromMs: 150_000,
     toMs: 300_000,
     intervalMs: 320,
     softCap: 130,
-    weights: { chaser: 2, speeder: 2, shooter: 2, tank: 1, charger: 2, swarm: 2 },
+    weights: {
+      chaser: 2,
+      speeder: 1,
+      shooter: 2,
+      tank: 1,
+      charger: 2,
+      swarm: 2,
+      flanker: 2,
+      summoner: 1,
+    },
     eliteEveryMs: 45_000,
+    formationEveryMs: 22_000,
   },
   {
     fromMs: 300_000,
@@ -39,14 +52,18 @@ export const SPAWN_TIMELINE: SpawnWave[] = [
     intervalMs: 280,
     softCap: 170,
     weights: {
-      chaser: 2,
-      speeder: 2,
+      chaser: 1,
+      speeder: 1,
       shooter: 2,
       tank: 2,
       charger: 2,
-      swarm: 3,
+      swarm: 2,
+      flanker: 3,
+      summoner: 2,
+      shield_elite: 1,
     },
     eliteEveryMs: 38_000,
+    formationEveryMs: 18_000,
   },
   {
     fromMs: 420_000,
@@ -54,14 +71,18 @@ export const SPAWN_TIMELINE: SpawnWave[] = [
     intervalMs: 240,
     softCap: 230,
     weights: {
-      chaser: 2,
-      speeder: 3,
-      shooter: 3,
+      chaser: 1,
+      speeder: 2,
+      shooter: 2,
       tank: 2,
-      charger: 3,
-      swarm: 3,
+      charger: 2,
+      swarm: 2,
+      flanker: 3,
+      summoner: 2,
+      shield_elite: 2,
     },
     eliteEveryMs: 30_000,
+    formationEveryMs: 16_000,
   },
 ];
 

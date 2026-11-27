@@ -5,13 +5,14 @@ import { hasTintSkin, loadMeta } from '../config/meta';
 import type { ArenaMap } from '../systems/ArenaMap';
 import { PlayerStats } from './PlayerStats';
 
-export type DeathCause = 'contact' | 'bullet' | 'poison' | 'charge' | 'unknown';
+export type DeathCause = 'contact' | 'bullet' | 'poison' | 'charge' | 'hazard' | 'unknown';
 
 export const DEATH_CAUSE_LABEL: Record<DeathCause, string> = {
   contact: '被近战贴身击倒',
   bullet: '被敌方弹幕击倒',
   poison: '中毒耗尽生命',
   charge: '被冲锋撞倒',
+  hazard: '踏入 Boss 禁区',
   unknown: '力竭倒下',
 };
 

@@ -37,7 +37,14 @@ export class CombatSystem {
         const amount = projectile.damage;
         const nx = (enemy.x - projectile.x) / (dist || 1);
         const ny = (enemy.y - projectile.y) / (dist || 1);
-        const dead = enemy.takeDamage(amount, time, nx * 10, ny * 10);
+        const dead = enemy.takeDamage(
+          amount,
+          time,
+          nx * 10,
+          ny * 10,
+          projectile.x,
+          projectile.y,
+        );
         fx?.damageNumber(enemy.x, enemy.y - enemy.radius, amount, crit);
         fx?.hitBurst(enemy.x, enemy.y);
         if (dead) {

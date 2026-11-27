@@ -255,7 +255,7 @@ export class WeaponSystem {
         const safe = Math.max(1, dist);
         const nx = (enemy.x - x) / safe;
         const ny = (enemy.y - y) / safe;
-        const dead = enemy.takeDamage(dmg, time, nx * 8, ny * 8);
+        const dead = enemy.takeDamage(dmg, time, nx * 8, ny * 8, x, y);
         this.pendingHits.push({
           x: enemy.x,
           y: enemy.y,
@@ -326,7 +326,7 @@ export class WeaponSystem {
       if (dist > radius + enemy.radius) continue;
       const mult = player.stats.rollCritMultiplier();
       const dmg = player.stats.auraDamage * mult;
-      const dead = enemy.takeDamage(dmg, time);
+      const dead = enemy.takeDamage(dmg, time, 0, 0, player.x, player.y);
       this.pendingHits.push({
         x: enemy.x,
         y: enemy.y,

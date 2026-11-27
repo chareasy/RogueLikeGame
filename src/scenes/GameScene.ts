@@ -24,6 +24,7 @@ import { WeaponSystem } from '../systems/WeaponSystem';
 import { XpPool } from '../systems/XpPool';
 import { Hud } from '../ui/Hud';
 import { LevelUpUI } from '../ui/LevelUpUI';
+import { PauseUI } from '../ui/PauseUI';
 import { ResultUI } from '../ui/ResultUI';
 import { VirtualJoystick } from '../ui/VirtualJoystick';
 
@@ -40,11 +41,13 @@ export class GameScene extends Phaser.Scene {
   private hud!: Hud;
   private levelUpUI!: LevelUpUI;
   private resultUI!: ResultUI;
+  private pauseUI!: PauseUI;
 
   private elapsedMs = 0;
   private ended = false;
   private magnetUntil = 0;
   private metaSnapshot = loadMeta();
+  private keyHandlers: Array<() => void> = [];
 
   constructor() {
     super('GameScene');
@@ -55,6 +58,7 @@ export class GameScene extends Phaser.Scene {
     this.ended = false;
     this.magnetUntil = 0;
     this.metaSnapshot = loadMeta();
+    this.keyHandlers = [];
 
     audioDirector.attach(this);
     audioDirector.unlock();
@@ -75,10 +79,13 @@ export class GameScene extends Phaser.Scene {
     this.combat = new CombatSystem();
     this.fx = new FeedbackFX(this);
     this.milestones = new MilestoneDirector(this);
+    this.milestones.setArena(this.arena);
     this.joystick = new VirtualJoystick(this);
     this.hud = new Hud(this, character.name, !this.joystick.touchMode);
     this.levelUpUI = new LevelUpUI(this);
     this.resultUI = new ResultUI(this);
+    this.pauseUI = new PauseUI(this, this.joystick.touchMode);
+    this.pauseUI.muted = audioDirector.isMuted;
 
     this.cameras.main.startFollow(this.player.sprite, true, 0.12, 0.12);
     this.cameras.main.setBounds(
@@ -94,6 +101,36 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < 4; i += 1) {
       this.enemies.spawnKind('swarm', 0, 0, 340 + i * 28);
     }
+
+    this.bindPauseKeys();
+  }
+
+  private bindPauseKeys(): void {
+    const kb = this.input.keyboard;
+    if (!kb) return;
+    const bind = (key: string, fn: () => void) => {
+      const handler = () => fn();
+      kb.on(`keydown-${key}`, handler);
+      this.keyHandlers.push(() => kb.off(`keydown-${key}`, handler));
+    };
+    const pauseHandlers = {
+      onResume: () => undefined,
+      onStickChange: (forced: boolean) => this.joystick.setForceVisible(forced),
+    };
+    bind('ESC', () => {
+      if (this.ended || this.levelUpUI.isOpen) return;
+      this.pauseUI.toggle(pauseHandlers);
+      audioDirector.playUi();
+    });
+    bind('M', () => {
+      const muted = audioDirector.toggleMute();
+      this.pauseUI.muted = muted;
+      if (!muted) audioDirector.playUi();
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      for (const off of this.keyHandlers) off();
+      this.keyHandlers = [];
+    });
   }
 
   private drawArena(): void {
@@ -119,8 +156,13 @@ export class GameScene extends Phaser.Scene {
     audioDirector.update(delta);
     if (this.ended) return;
 
+    if (this.pauseUI.isOpen) {
+      return;
+    }
+
     const time = this.time.now;
-    if (this.joystick.touchMode) {
+    const stickOn = this.joystick.touchMode || this.joystick.forceVisible;
+    if (stickOn) {
       this.joystick.enabled = !this.levelUpUI.isOpen;
       this.joystick.setVisible(!this.levelUpUI.isOpen);
     }
@@ -257,6 +299,7 @@ export class GameScene extends Phaser.Scene {
   private finish(won: boolean): void {
     if (this.ended) return;
     this.ended = true;
+    this.pauseUI.hide();
     this.levelUpUI.dismiss();
     this.hud.setVisible(false);
     this.joystick.setVisible(false);

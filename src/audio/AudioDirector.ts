@@ -27,6 +27,7 @@ export class AudioDirector {
   private intensityBand = 0;
   private recentKills = 0;
   private killDecayAcc = 0;
+  private muted = false;
 
   attach(scene: Phaser.Scene): void {
     this.scene = scene;
@@ -139,13 +140,27 @@ export class AudioDirector {
     ];
   }
 
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+    if (this.scene) this.scene.sound.mute = muted;
+  }
+
+  get isMuted(): boolean {
+    return this.muted;
+  }
+
+  toggleMute(): boolean {
+    this.setMuted(!this.muted);
+    return this.muted;
+  }
+
   playUi(): void {
-    if (!this.unlocked || !this.scene) return;
+    if (!this.unlocked || !this.scene || this.muted) return;
     this.scene.sound.play('sfx_ui', { volume: 0.28, rate: 1 });
   }
 
   playMilestone(id: string): void {
-    if (!this.unlocked || !this.scene) return;
+    if (!this.unlocked || !this.scene || this.muted) return;
     if (id === 'boss_warning' || id === 'boss_arrive') {
       this.scene.sound.play('sfx_kill_boss', {
         volume: id === 'boss_arrive' ? 0.4 : 0.28,
@@ -168,7 +183,7 @@ export class AudioDirector {
   }
 
   playKill(kind?: EnemyKind): void {
-    if (!this.unlocked || !this.scene) return;
+    if (!this.unlocked || !this.scene || this.muted) return;
     this.recentKills = Math.min(30, this.recentKills + 1);
     let key = 'sfx_kill';
     let volume = 0.28;

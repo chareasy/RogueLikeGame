@@ -92,6 +92,7 @@ export class ArenaMap {
     }
     this.redrawPoisons(0);
 
+    // Safe zones are milestone-driven (no silent random pulse).
     const safeSpots: Array<[number, number, number]> = [
       [-600, 500, 90],
       [500, -480, 85],
@@ -127,12 +128,75 @@ export class ArenaMap {
         y,
         radius: r,
         activeUntil: 0,
-        nextAt: 12_000 + Math.random() * 8_000,
+        nextAt: Number.POSITIVE_INFINITY,
         graphic,
         icon,
         label,
       });
     }
+  }
+
+  /**
+   * Activate the safest nearby zone (or closest) for a climax beat.
+   * Returns the chosen zone center for banners.
+   */
+  activateSafeForEvent(
+    time: number,
+    nearX: number,
+    nearY: number,
+    durationMs = 14_000,
+  ): { x: number; y: number } | null {
+    if (this.safes.length === 0) return null;
+    let best = this.safes[0]!;
+    let bestDist = Number.POSITIVE_INFINITY;
+    for (const safe of this.safes) {
+      // Prefer inactive zones near the player.
+      const dist = Phaser.Math.Distance.Between(nearX, nearY, safe.x, safe.y);
+      const busy = time < safe.activeUntil ? 400 : 0;
+      if (dist + busy < bestDist) {
+        bestDist = dist + busy;
+        best = safe;
+      }
+    }
+    best.activeUntil = time + durationMs;
+    best.graphic.setVisible(true);
+    best.icon.setVisible(true);
+    best.label.setVisible(true);
+    best.graphic.setAlpha(0.45);
+    this.scene.tweens.add({
+      targets: best.graphic,
+      alpha: 0.16,
+      duration: 700,
+      yoyo: true,
+      repeat: Math.max(1, Math.floor(durationMs / 1400)),
+    });
+    this.floatHint(best.x, best.y - best.radius, '安全区开启！', '#b8fff4');
+    return { x: best.x, y: best.y };
+  }
+
+  /** Brief telegraph before a safe zone opens. */
+  telegraphSafe(nearX: number, nearY: number, delayMs: number): void {
+    if (this.safes.length === 0) return;
+    let best = this.safes[0]!;
+    let bestDist = Number.POSITIVE_INFINITY;
+    for (const safe of this.safes) {
+      const dist = Phaser.Math.Distance.Between(nearX, nearY, safe.x, safe.y);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = safe;
+      }
+    }
+    best.graphic.setVisible(true);
+    best.graphic.setAlpha(0.08);
+    best.label.setVisible(true);
+    best.label.setText('安全区即将开启');
+    best.label.setColor('#ffe66d');
+    this.scene.time.delayedCall(delayMs, () => {
+      if (best.label.active) {
+        best.label.setText('安全区');
+        best.label.setColor('#b8fff4');
+      }
+    });
   }
 
   private redrawPoisons(time: number): void {
@@ -198,28 +262,18 @@ export class ArenaMap {
       for (const p of this.poisons) this.spawnBubble(p.x, p.y, p.radius);
     }
 
-    // Pulse safe zones on a schedule.
+    // Safe zones only stay visible while an event keeps them active.
     for (const safe of this.safes) {
-      if (time >= safe.nextAt && time >= safe.activeUntil) {
-        safe.activeUntil = time + 12_000;
-        safe.nextAt = time + 40_000 + Math.random() * 15_000;
+      const active = time < safe.activeUntil;
+      if (!active && safe.graphic.visible && safe.label.text === '安全区') {
+        safe.graphic.setVisible(false);
+        safe.icon.setVisible(false);
+        safe.label.setVisible(false);
+      } else if (active) {
         safe.graphic.setVisible(true);
         safe.icon.setVisible(true);
         safe.label.setVisible(true);
-        safe.graphic.setAlpha(0.4);
-        this.scene.tweens.add({
-          targets: safe.graphic,
-          alpha: 0.16,
-          duration: 900,
-          yoyo: true,
-          repeat: 10,
-        });
-        this.floatHint(safe.x, safe.y - safe.radius, '安全区出现', '#b8fff4');
       }
-      const active = time < safe.activeUntil;
-      safe.graphic.setVisible(active);
-      safe.icon.setVisible(active);
-      safe.label.setVisible(active);
     }
 
     const inPoison =

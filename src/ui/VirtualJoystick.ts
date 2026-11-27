@@ -15,6 +15,8 @@ export class VirtualJoystick {
   private dy = 0;
   /** True when device reports coarse pointer (touch-first). */
   readonly touchMode: boolean;
+  /** Pause-menu override to show stick on desktop. */
+  forceVisible = false;
   enabled = true;
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -66,8 +68,12 @@ export class VirtualJoystick {
     return this.activePointerId !== null && (this.dx !== 0 || this.dy !== 0);
   }
 
+  private stickAllowed(): boolean {
+    return this.touchMode || this.forceVisible;
+  }
+
   private onDown(pointer: Phaser.Input.Pointer): void {
-    if (!this.touchMode || !this.enabled || this.activePointerId !== null) return;
+    if (!this.stickAllowed() || !this.enabled || this.activePointerId !== null) return;
     const dist = Phaser.Math.Distance.Between(
       pointer.x,
       pointer.y,
@@ -106,8 +112,23 @@ export class VirtualJoystick {
     this.dy = dy / this.maxRadius;
   }
 
+  setForceVisible(forced: boolean): void {
+    this.forceVisible = forced;
+    if (forced) {
+      this.enabled = true;
+      this.base.setAlpha(0.5).setVisible(true);
+      this.thumb.setAlpha(0.7).setVisible(true);
+    } else if (!this.touchMode) {
+      this.enabled = false;
+      this.base.setVisible(false);
+      this.thumb.setVisible(false);
+      this.dx = 0;
+      this.dy = 0;
+    }
+  }
+
   setVisible(visible: boolean): void {
-    if (!this.touchMode) {
+    if (!this.stickAllowed()) {
       this.base.setVisible(false);
       this.thumb.setVisible(false);
       return;

@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import { BOSS_SPAWN_MS, GAME_WIDTH } from '../config/constants';
-import type { EnemySystem } from './EnemySystem';
 import type { Player } from '../entities/Player';
 import type { XpPool } from './XpPool';
 import { audioDirector } from '../audio/AudioDirector';
+import type { ArenaMap } from './ArenaMap';
+import type { EnemySystem } from './EnemySystem';
 
 export interface MilestoneEvent {
   id: string;
@@ -60,7 +61,13 @@ export class MilestoneDirector {
   private countdownBarBg?: Phaser.GameObjects.Rectangle;
   private countdownEvent: MilestoneEvent | null = null;
 
+  private arena: ArenaMap | null = null;
+
   constructor(private readonly scene: Phaser.Scene) {}
+
+  setArena(arena: ArenaMap): void {
+    this.arena = arena;
+  }
 
   update(
     elapsedMs: number,
@@ -81,6 +88,14 @@ export class MilestoneDirector {
         this.beginCountdown(event);
         this.scene.cameras.main.flash(120, 255, 200, 80);
         audioDirector.playUi();
+        // Safe-zone telegraph tied to climax beats.
+        if (
+          event.id === 'elite_surge' ||
+          event.id === 'chest_wave' ||
+          event.id === 'boss_warning'
+        ) {
+          this.arena?.telegraphSafe(player.x, player.y, Math.min(warnMs, 5000));
+        }
       }
 
       if (elapsedMs < event.atMs || this.fired.has(event.id)) continue;
@@ -166,14 +181,20 @@ export class MilestoneDirector {
     audioDirector.playMilestone(event.id);
 
     if (event.id === 'elite_surge') {
-      for (let i = 0; i < 3; i += 1) {
+      this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 16_000);
+      for (let i = 0; i < 2; i += 1) {
         enemies.spawnKind('elite', player.x, player.y, 300 + i * 40);
       }
-      for (let i = 0; i < 6; i += 1) {
+      enemies.spawnKind('shield_elite', player.x, player.y, 320);
+      for (let i = 0; i < 5; i += 1) {
+        enemies.spawnKind('flanker', player.x, player.y, 240 + i * 24);
+      }
+      for (let i = 0; i < 4; i += 1) {
         enemies.spawnKind('charger', player.x, player.y, 260 + i * 30);
       }
       this.scene.cameras.main.flash(180, 255, 120, 60);
     } else if (event.id === 'chest_wave') {
+      this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 14_000);
       for (let i = 0; i < 28; i += 1) {
         const a = (i / 28) * Math.PI * 2;
         const d = 40 + Math.random() * 160;
@@ -184,11 +205,13 @@ export class MilestoneDirector {
         );
       }
       xpPool.magnetizeAll();
+      enemies.spawnKind('summoner', player.x, player.y, 280);
       for (let i = 0; i < 14; i += 1) {
         enemies.spawnKind('swarm', player.x, player.y, 220 + i * 18);
       }
       this.scene.cameras.main.flash(160, 120, 255, 160);
     } else if (event.id === 'boss_warning') {
+      this.arena?.activateSafeForEvent(this.scene.time.now, player.x, player.y, 20_000);
       this.scene.cameras.main.shake(200, 0.003);
     } else if (event.id === 'boss_arrive') {
       this.scene.cameras.main.flash(320, 255, 40, 40);
