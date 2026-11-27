@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audioDirector } from '../audio/AudioDirector';
 import { ASSET_KEYS } from '../config/assets';
 import { CHARACTERS, type CharacterId } from '../config/characters';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
@@ -13,6 +14,9 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   create(): void {
+    audioDirector.attach(this);
+    audioDirector.unlock();
+    audioDirector.playMenu();
     this.cameras.main.setBackgroundColor(COLORS.bg);
     this.add
       .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, ASSET_KEYS.menuBg)
@@ -68,6 +72,8 @@ export class CharacterSelectScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const start = () => {
+      audioDirector.unlock();
+      audioDirector.playUi();
       this.registry.set('selectedCharacter', this.selected);
       this.scene.start('GameScene');
     };
@@ -78,6 +84,10 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-SPACE', start);
 
     this.select('knight');
+  }
+
+  update(_time: number, delta: number): void {
+    audioDirector.update(delta);
   }
 
   private createCard(id: CharacterId, x: number, y: number): Phaser.GameObjects.Container {
@@ -119,6 +129,7 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   private select(id: CharacterId): void {
+    if (this.selected !== id) audioDirector.playUi();
     this.selected = id;
     const hero = CHARACTERS.find((c) => c.id === id)!;
     for (const card of this.cards) {

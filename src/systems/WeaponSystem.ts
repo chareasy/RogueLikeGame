@@ -133,15 +133,30 @@ export class WeaponSystem {
         const dead = enemy.takeDamage(dmg, time);
         blade.hitCooldown.set(ei, time + 220);
         if (dead) {
-          this.pendingOrbitKills.push({ x: enemy.x, y: enemy.y, xp: enemy.xp });
+          this.pendingOrbitKills.push({
+            x: enemy.x,
+            y: enemy.y,
+            xp: enemy.xp,
+            kind: enemy.kind,
+          });
           enemy.kill();
         }
       }
     }
   }
 
-  readonly pendingOrbitKills: Array<{ x: number; y: number; xp: number }> = [];
-  readonly pendingAuraKills: Array<{ x: number; y: number; xp: number }> = [];
+  readonly pendingOrbitKills: Array<{
+    x: number;
+    y: number;
+    xp: number;
+    kind: Enemy['kind'];
+  }> = [];
+  readonly pendingAuraKills: Array<{
+    x: number;
+    y: number;
+    xp: number;
+    kind: Enemy['kind'];
+  }> = [];
 
   private updateAura(time: number, player: Player, enemies: Enemy[]): void {
     const radius = Math.max(40, player.stats.auraRadius);
@@ -167,7 +182,12 @@ export class WeaponSystem {
       const dead = enemy.takeDamage(dmg, time);
       if (dead) {
         enemy.kill();
-        this.pendingAuraKills.push({ x: enemy.x, y: enemy.y, xp: enemy.xp });
+        this.pendingAuraKills.push({
+          x: enemy.x,
+          y: enemy.y,
+          xp: enemy.xp,
+          kind: enemy.kind,
+        });
       }
     }
   }

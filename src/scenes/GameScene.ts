@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audioDirector } from '../audio/AudioDirector';
 import { ASSET_KEYS } from '../config/assets';
 import {
   getCharacter,
@@ -10,6 +11,7 @@ import {
   COLORS,
   MATCH_DURATION_MS,
 } from '../config/constants';
+import type { EnemyKind } from '../config/enemies';
 import { Player } from '../entities/Player';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EnemySystem } from '../systems/EnemySystem';
@@ -39,6 +41,10 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.elapsedMs = 0;
     this.ended = false;
+
+    audioDirector.attach(this);
+    audioDirector.unlock();
+    audioDirector.playCombat();
 
     const characterId = (this.registry.get('selectedCharacter') as CharacterId) || 'knight';
     const character = getCharacter(characterId);
@@ -88,6 +94,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    audioDirector.update(delta);
     if (this.ended) return;
 
     const time = this.time.now;
@@ -112,6 +119,7 @@ export class GameScene extends Phaser.Scene {
       this.weapons.projectiles,
       this.enemies.enemies,
       (x, y, value) => this.xpPool.spawn(x, y, value),
+      (kind) => audioDirector.playKill(kind),
     );
 
     this.flushSkillKills(this.weapons.pendingOrbitKills);
@@ -132,6 +140,13 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    audioDirector.setCombatThreat({
+      elapsedMs: this.elapsedMs,
+      aliveCount: this.enemies.aliveCount,
+      hasElite: this.enemies.eliteAlive,
+      hasBoss: this.enemies.bossAlive,
+    });
+
     this.hud.update(
       this.player.stats,
       this.elapsedMs,
@@ -143,12 +158,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private flushSkillKills(
-    pending: Array<{ x: number; y: number; xp: number }>,
+    pending: Array<{ x: number; y: number; xp: number; kind: EnemyKind }>,
   ): void {
     while (pending.length > 0) {
       const kill = pending.pop()!;
       this.combat.kills += 1;
       this.xpPool.spawn(kill.x, kill.y, kill.xp);
+      audioDirector.playKill(kill.kind);
     }
   }
 
@@ -172,6 +188,8 @@ export class GameScene extends Phaser.Scene {
     if (this.ended) return;
     this.ended = true;
     this.hud.setVisible(false);
+    // Ease back toward darker menu tone after the run ends.
+    audioDirector.playMenu();
     this.resultUI.show(
       won,
       this.combat.kills,

@@ -48,3 +48,14 @@ export const ASSET_FILES: Array<{ key: string; path: string }> = [
   { key: ASSET_KEYS.enemies.elite, path: 'assets/enemy_elite.png' },
   { key: ASSET_KEYS.enemies.boss, path: 'assets/enemy_boss.png' },
 ];
+
+export const AUDIO_FILES: Array<{ key: string; path: string }> = [
+  { key: 'bgm_menu', path: 'audio/bgm_menu.ogg' },
+  { key: 'bgm_combat_1', path: 'audio/bgm_combat_1.ogg' },
+  { key: 'bgm_combat_2', path: 'audio/bgm_combat_2.ogg' },
+  { key: 'bgm_combat_3', path: 'audio/bgm_combat_3.ogg' },
+  { key: 'sfx_kill', path: 'audio/sfx_kill.wav' },
+  { key: 'sfx_kill_elite', path: 'audio/sfx_kill_elite.wav' },
+  { key: 'sfx_kill_boss', path: 'audio/sfx_kill_boss.wav' },
+  { key: 'sfx_ui', path: 'audio/sfx_ui.wav' },
+];

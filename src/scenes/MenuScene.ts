@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audioDirector } from '../audio/AudioDirector';
 import { ASSET_KEYS } from '../config/assets';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 
@@ -8,6 +9,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    audioDirector.attach(this);
     this.cameras.main.setBackgroundColor(COLORS.bg);
 
     this.add
@@ -52,16 +54,32 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const start = () => this.scene.start('CharacterSelectScene');
+    const unlockAndStart = () => {
+      audioDirector.unlock();
+      audioDirector.playUi();
+      audioDirector.playMenu();
+      this.scene.start('CharacterSelectScene');
+    };
+
+    // Unlock audio on first interaction with the page.
+    this.input.once('pointerdown', () => {
+      audioDirector.unlock();
+      audioDirector.playMenu();
+    });
+    this.input.keyboard?.once('keydown', () => {
+      audioDirector.unlock();
+      audioDirector.playMenu();
+    });
+
     btn.on('pointerover', () => btn.setFillStyle(0x7eeae0, 1));
     btn.on('pointerout', () => btn.setFillStyle(0x4fd1c5, 1));
-    btn.on('pointerdown', start);
+    btn.on('pointerdown', unlockAndStart);
 
-    this.input.keyboard?.once('keydown-ENTER', start);
-    this.input.keyboard?.once('keydown-SPACE', start);
+    this.input.keyboard?.once('keydown-ENTER', unlockAndStart);
+    this.input.keyboard?.once('keydown-SPACE', unlockAndStart);
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 28, '4 名角色 · 8 种敌人 · 12 种强化 · Enter / 空格继续', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 28, '点击或按键开启音效 · Enter / 空格继续', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '12px',
         color: '#c5d0e6',
@@ -69,5 +87,9 @@ export class MenuScene extends Phaser.Scene {
         strokeThickness: 3,
       })
       .setOrigin(0.5);
+  }
+
+  update(_time: number, delta: number): void {
+    audioDirector.update(delta);
   }
 }

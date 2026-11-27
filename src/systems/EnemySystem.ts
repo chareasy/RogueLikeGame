@@ -53,6 +53,10 @@ export class EnemySystem {
     return this.enemies.some((e) => e.active && e.kind === 'boss');
   }
 
+  get eliteAlive(): boolean {
+    return this.enemies.some((e) => e.active && (e.kind === 'elite' || e.kind === 'tank'));
+  }
+
   get hasBossSpawned(): boolean {
     return this.bossSpawned;
   }

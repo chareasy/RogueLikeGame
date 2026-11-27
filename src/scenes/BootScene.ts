@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { ASSET_FILES } from '../config/assets';
+import { AUDIO_FILES, ASSET_FILES } from '../config/assets';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { audioDirector } from '../audio/AudioDirector';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -29,9 +30,13 @@ export class BootScene extends Phaser.Scene {
     for (const asset of ASSET_FILES) {
       this.load.image(asset.key, asset.path);
     }
+    for (const audio of AUDIO_FILES) {
+      this.load.audio(audio.key, audio.path);
+    }
   }
 
   create(): void {
+    audioDirector.attach(this);
     this.scene.start('MenuScene');
   }
 }

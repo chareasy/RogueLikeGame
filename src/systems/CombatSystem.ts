@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { EnemyKind } from '../config/enemies';
 import type { Enemy } from '../entities/Enemy';
 import type { Player } from '../entities/Player';
 import type { Projectile } from '../entities/Projectile';
@@ -13,6 +14,7 @@ export class CombatSystem {
     projectiles: Projectile[],
     enemies: Enemy[],
     spawnXp: (x: number, y: number, value: number) => void,
+    onKill?: (kind: EnemyKind) => void,
   ): void {
     for (const projectile of projectiles) {
       if (!projectile.active) continue;
@@ -31,9 +33,11 @@ export class CombatSystem {
         projectile.hitIds.add(i);
         const dead = enemy.takeDamage(projectile.damage, time);
         if (dead) {
+          const kind = enemy.kind;
           spawnXp(enemy.x, enemy.y, enemy.xp);
           enemy.kill();
           this.kills += 1;
+          onKill?.(kind);
         }
 
         if (projectile.pierceLeft <= 0) {
