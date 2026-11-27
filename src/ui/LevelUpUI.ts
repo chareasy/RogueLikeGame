@@ -43,7 +43,7 @@ export class LevelUpUI {
       .setOrigin(0.5);
 
     this.hint = scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 36, '按 1 / 2 / 3 选择，或点击卡片 · 金色角标=适合当前角色', {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 36, '按 1 / 2 / 3 选择 · 金色角标=适合当前角色 · 前几次偏本职', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '13px',
         color: '#9fb0d0',

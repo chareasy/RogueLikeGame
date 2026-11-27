@@ -118,8 +118,9 @@ export const CHARACTERS: CharacterDef[] = [
     pickupRadius: 92,
     orbitCount: 0,
     orbitRadius: 70,
-    auraRadius: 82,
-    auraDamage: 8,
+    // Tuned down: early aura was full-HP clearing too easily.
+    auraRadius: 58,
+    auraDamage: 5,
     critChance: 0.1,
     accent: '#ff6b6b',
   },

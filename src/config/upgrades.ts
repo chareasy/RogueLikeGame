@@ -99,44 +99,93 @@ export const UPGRADES: UpgradeDef[] = [
 /** Higher weight = more likely for that character's build. */
 const AFFINITY: Record<CharacterId, Partial<Record<UpgradeId, number>>> = {
   knight: {
-    damage: 3,
-    pierce: 2.5,
-    firerate: 2,
-    maxhp: 2.5,
-    regen: 2,
-    crit: 1.5,
+    damage: 4,
+    pierce: 3.5,
+    firerate: 3,
+    maxhp: 3,
+    regen: 2.2,
+    crit: 2,
+    // Off-kit heavily downweighted.
+    orbit: 0.25,
+    aura: 0.2,
+    count: 0.45,
   },
   mage: {
-    orbit: 4.5,
-    area: 3,
-    damage: 2.5,
-    pierce: 2,
+    orbit: 6,
+    area: 4.5,
+    damage: 3,
+    pierce: 2.5,
     magnet: 2,
-    crit: 2,
+    crit: 2.2,
+    aura: 0.2,
+    count: 0.35,
+    movespeed: 0.5,
   },
   ranger: {
-    count: 4,
-    firerate: 3.5,
-    movespeed: 3.5,
-    crit: 3,
-    pierce: 2,
-    damage: 2,
+    count: 5.5,
+    firerate: 4.5,
+    movespeed: 4,
+    crit: 3.5,
+    pierce: 2.5,
+    damage: 2.5,
+    orbit: 0.25,
+    aura: 0.2,
+    maxhp: 0.6,
   },
   berserker: {
-    aura: 4.5,
-    area: 3.5,
-    damage: 3,
-    maxhp: 2.5,
-    regen: 2.5,
-    crit: 2,
+    aura: 6,
+    area: 4.5,
+    damage: 3.5,
+    maxhp: 3,
+    regen: 2.8,
+    crit: 2.2,
+    orbit: 0.2,
+    count: 0.35,
+    pierce: 0.45,
   },
+};
+
+/** Core kit cards — early level-ups bias hard toward these. */
+const CORE: Record<CharacterId, UpgradeId[]> = {
+  knight: ['damage', 'pierce', 'firerate', 'maxhp'],
+  mage: ['orbit', 'area', 'damage', 'pierce'],
+  ranger: ['count', 'firerate', 'movespeed', 'crit'],
+  berserker: ['aura', 'area', 'damage', 'maxhp'],
 };
 
 export function isPreferredUpgrade(
   characterId: CharacterId,
   upgradeId: UpgradeId,
 ): boolean {
-  return (AFFINITY[characterId]?.[upgradeId] ?? 1) >= 2.5;
+  return (AFFINITY[characterId]?.[upgradeId] ?? 0.4) >= 2.5;
+}
+
+export function isCoreUpgrade(
+  characterId: CharacterId,
+  upgradeId: UpgradeId,
+): boolean {
+  return (CORE[characterId] ?? []).includes(upgradeId);
+}
+
+function weightedPick(
+  pool: UpgradeDef[],
+  weights: Partial<Record<UpgradeId, number>>,
+  boostCore: boolean,
+  characterId: CharacterId,
+): number {
+  let total = 0;
+  const weighted = pool.map((u) => {
+    let w = weights[u.id] ?? 0.4;
+    if (boostCore && isCoreUpgrade(characterId, u.id)) w *= 2.2;
+    total += w;
+    return w;
+  });
+  let roll = Math.random() * total;
+  for (let i = 0; i < weighted.length; i += 1) {
+    roll -= weighted[i]!;
+    if (roll <= 0) return i;
+  }
+  return Math.max(0, pool.length - 1);
 }
 
 export function pickUpgradeChoices(
@@ -147,28 +196,38 @@ export function pickUpgradeChoices(
   const available = UPGRADES.filter((u) => stacks[u.id] < u.maxStacks);
   const pool = available.length > 0 ? available : UPGRADES;
   const weights = AFFINITY[characterId] ?? {};
+  const picksDone = Object.values(stacks).reduce((a, b) => a + b, 0);
+  // First 3 upgrade picks: force at least 2 core cards into the offer.
+  const early = picksDone < 3;
 
   const picked: UpgradeDef[] = [];
   const remaining = [...pool];
 
-  while (picked.length < Math.min(count, remaining.length)) {
-    let total = 0;
-    const weighted = remaining.map((u) => {
-      const w = weights[u.id] ?? 1;
-      total += w;
-      return { u, w };
-    });
-    let roll = Math.random() * total;
-    let chosenIdx = 0;
-    for (let i = 0; i < weighted.length; i += 1) {
-      roll -= weighted[i]!.w;
-      if (roll <= 0) {
-        chosenIdx = i;
-        break;
-      }
+  if (early) {
+    const corePool = remaining.filter((u) => isCoreUpgrade(characterId, u.id));
+    const coreNeed = Math.min(2, corePool.length, count);
+    for (let i = 0; i < coreNeed; i += 1) {
+      const idxInCore = weightedPick(corePool, weights, true, characterId);
+      const chosen = corePool[idxInCore]!;
+      picked.push(chosen);
+      const remIdx = remaining.findIndex((u) => u.id === chosen.id);
+      if (remIdx >= 0) remaining.splice(remIdx, 1);
+      corePool.splice(idxInCore, 1);
     }
-    picked.push(remaining[chosenIdx]!);
-    remaining.splice(chosenIdx, 1);
+  }
+
+  while (picked.length < Math.min(count, pool.length) && remaining.length > 0) {
+    const idx = weightedPick(remaining, weights, early, characterId);
+    picked.push(remaining[idx]!);
+    remaining.splice(idx, 1);
+  }
+
+  // Shuffle offer order so core isn't always left-aligned.
+  for (let i = picked.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = picked[i]!;
+    picked[i] = picked[j]!;
+    picked[j] = tmp;
   }
 
   return picked;

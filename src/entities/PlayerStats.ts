@@ -96,8 +96,8 @@ export class PlayerStats {
         break;
       case 'aura':
         this.hasAura = true;
-        this.auraRadius = Math.max(this.auraRadius, 70) * 1.12;
-        this.auraDamage = Math.max(this.auraDamage, 8) * 1.15;
+        this.auraRadius = Math.max(this.auraRadius, 58) * 1.08;
+        this.auraDamage = Math.max(this.auraDamage, 5) * 1.1;
         break;
     }
   }

@@ -12,10 +12,13 @@ export type SafeZone = {
   activeUntil: number;
   nextAt: number;
   graphic: Phaser.GameObjects.Arc;
+  icon: Phaser.GameObjects.Text;
+  label: Phaser.GameObjects.Text;
 };
 
 /**
  * Arena props: blocking rocks, poison pools, pulsing safe zones.
+ * Visual language is intentionally distinct so players can read hazards at a glance.
  */
 export class ArenaMap {
   readonly rocks: Rock[] = [];
@@ -23,6 +26,9 @@ export class ArenaMap {
   readonly safes: SafeZone[] = [];
   private readonly poisonGfx: Phaser.GameObjects.Graphics;
   private poisonTickAcc = 0;
+  private bubbleAcc = 0;
+  private wasInSafe = false;
+  private wasInPoison = false;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.poisonGfx = scene.add.graphics().setDepth(1);
@@ -44,10 +50,23 @@ export class ArenaMap {
     ];
     for (const [x, y, r] of rockSpots) {
       this.rocks.push({ x, y, radius: r });
-      const rock = this.scene.add.circle(x, y, r, 0x3a465e, 0.95).setDepth(2);
-      rock.setStrokeStyle(3, 0x1a2236, 1);
-      // Subtle top highlight.
-      this.scene.add.circle(x - r * 0.25, y - r * 0.3, r * 0.35, 0x5a6a88, 0.35).setDepth(2);
+      // Ground shadow for "solid" read.
+      this.scene.add
+        .ellipse(x + 4, y + r * 0.55, r * 1.7, r * 0.7, 0x000000, 0.35)
+        .setDepth(1);
+      const rock = this.scene.add.circle(x, y, r, 0x4a5568, 1).setDepth(2);
+      rock.setStrokeStyle(4, 0x1a1f2e, 1);
+      this.scene.add.circle(x - r * 0.28, y - r * 0.32, r * 0.32, 0x8a96aa, 0.45).setDepth(2);
+      this.scene.add
+        .text(x, y, '石', {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '14px',
+          color: '#c5cedd',
+          fontStyle: 'bold',
+        })
+        .setOrigin(0.5)
+        .setDepth(3)
+        .setAlpha(0.55);
     }
 
     const poisonSpots: Array<[number, number, number]> = [
@@ -58,8 +77,20 @@ export class ArenaMap {
     ];
     for (const [x, y, r] of poisonSpots) {
       this.poisons.push({ x, y, radius: r });
+      this.scene.add
+        .text(x, y, '☠ 毒', {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '16px',
+          color: '#d6ff9a',
+          fontStyle: 'bold',
+          stroke: '#1a3018',
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5)
+        .setDepth(3)
+        .setAlpha(0.85);
     }
-    this.redrawPoisons();
+    this.redrawPoisons(0);
 
     const safeSpots: Array<[number, number, number]> = [
       [-600, 500, 90],
@@ -67,70 +98,166 @@ export class ArenaMap {
       [50, 650, 80],
     ];
     for (const [x, y, r] of safeSpots) {
-      const graphic = this.scene.add.circle(x, y, r, 0x4fd1c5, 0.12);
-      graphic.setStrokeStyle(2, 0x7eeae0, 0.55);
+      const graphic = this.scene.add.circle(x, y, r, 0x3dd6c6, 0.16);
+      graphic.setStrokeStyle(3, 0xb8fff4, 0.85);
       graphic.setDepth(1);
       graphic.setVisible(false);
+      const icon = this.scene.add
+        .text(x, y - 8, '🛡', {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '22px',
+        })
+        .setOrigin(0.5)
+        .setDepth(3)
+        .setVisible(false);
+      const label = this.scene.add
+        .text(x, y + 16, '安全区', {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '13px',
+          color: '#b8fff4',
+          fontStyle: 'bold',
+          stroke: '#0b1020',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setDepth(3)
+        .setVisible(false);
       this.safes.push({
         x,
         y,
         radius: r,
         activeUntil: 0,
-        nextAt: 8_000 + Math.random() * 6_000,
+        nextAt: 12_000 + Math.random() * 8_000,
         graphic,
+        icon,
+        label,
       });
     }
   }
 
-  private redrawPoisons(): void {
+  private redrawPoisons(time: number): void {
     this.poisonGfx.clear();
     for (const p of this.poisons) {
-      this.poisonGfx.fillStyle(0x3d8b5a, 0.28);
+      // Outer danger ring + inner toxic fill — distinct from safe cyan.
+      this.poisonGfx.fillStyle(0x5a3d8b, 0.22);
       this.poisonGfx.fillCircle(p.x, p.y, p.radius);
-      this.poisonGfx.lineStyle(2, 0x6fd99a, 0.45);
+      this.poisonGfx.fillStyle(0x6fb84a, 0.3);
+      this.poisonGfx.fillCircle(p.x, p.y, p.radius * 0.72);
+      this.poisonGfx.lineStyle(3, 0xc8ff6a, 0.7 + Math.sin(time / 200) * 0.15);
       this.poisonGfx.strokeCircle(p.x, p.y, p.radius);
+      this.poisonGfx.lineStyle(2, 0x9b59b6, 0.55);
+      this.poisonGfx.strokeCircle(p.x, p.y, p.radius * 0.72);
     }
   }
 
+  private spawnBubble(x: number, y: number, r: number): void {
+    const ang = Math.random() * Math.PI * 2;
+    const dist = Math.random() * r * 0.7;
+    const bx = x + Math.cos(ang) * dist;
+    const by = y + Math.sin(ang) * dist;
+    const bubble = this.scene.add
+      .circle(bx, by, 3 + Math.random() * 3, 0xb8ff6a, 0.7)
+      .setDepth(3);
+    this.scene.tweens.add({
+      targets: bubble,
+      y: by - 18 - Math.random() * 16,
+      alpha: 0,
+      scale: 0.3,
+      duration: 500 + Math.random() * 300,
+      onComplete: () => bubble.destroy(),
+    });
+  }
+
+  private floatHint(x: number, y: number, text: string, color: string): void {
+    const t = this.scene.add
+      .text(x, y - 18, text, {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '15px',
+        color,
+        fontStyle: 'bold',
+        stroke: '#0b1020',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(45);
+    this.scene.tweens.add({
+      targets: t,
+      y: y - 48,
+      alpha: 0,
+      duration: 700,
+      onComplete: () => t.destroy(),
+    });
+  }
+
   update(time: number, delta: number, player: Player): void {
+    this.redrawPoisons(time);
+
+    this.bubbleAcc += delta;
+    if (this.bubbleAcc >= 220) {
+      this.bubbleAcc = 0;
+      for (const p of this.poisons) this.spawnBubble(p.x, p.y, p.radius);
+    }
+
     // Pulse safe zones on a schedule.
     for (const safe of this.safes) {
       if (time >= safe.nextAt && time >= safe.activeUntil) {
         safe.activeUntil = time + 12_000;
         safe.nextAt = time + 40_000 + Math.random() * 15_000;
         safe.graphic.setVisible(true);
-        safe.graphic.setAlpha(0.35);
+        safe.icon.setVisible(true);
+        safe.label.setVisible(true);
+        safe.graphic.setAlpha(0.4);
         this.scene.tweens.add({
           targets: safe.graphic,
-          alpha: 0.12,
+          alpha: 0.16,
           duration: 900,
           yoyo: true,
           repeat: 10,
         });
+        this.floatHint(safe.x, safe.y - safe.radius, '安全区出现', '#b8fff4');
       }
-      if (time >= safe.activeUntil) {
-        safe.graphic.setVisible(false);
-      } else {
-        safe.graphic.setVisible(true);
-      }
+      const active = time < safe.activeUntil;
+      safe.graphic.setVisible(active);
+      safe.icon.setVisible(active);
+      safe.label.setVisible(active);
     }
+
+    const inPoison =
+      !this.isInSafe(player.x, player.y, time) &&
+      this.poisons.some(
+        (p) =>
+          Phaser.Math.Distance.Between(player.x, player.y, p.x, p.y) <=
+          p.radius + player.radius,
+      );
+    if (inPoison && !this.wasInPoison) {
+      this.floatHint(player.x, player.y, '踩到毒池！', '#ff8aff');
+    }
+    this.wasInPoison = inPoison;
 
     // Poison DoT.
     this.poisonTickAcc += delta;
     if (this.poisonTickAcc >= 400) {
       this.poisonTickAcc = 0;
-      if (!this.isInSafe(player.x, player.y, time)) {
-        for (const p of this.poisons) {
-          if (Phaser.Math.Distance.Between(player.x, player.y, p.x, p.y) <= p.radius + player.radius) {
-            player.tryHurt(4, time);
-            break;
-          }
-        }
+      if (inPoison) {
+        player.tryHurt(4, time);
+        this.floatHint(player.x, player.y - 6, '-毒', '#d6ff9a');
+        // Brief green flash without wiping meta skin tint permanently.
+        const prevAlpha = player.sprite.alpha;
+        player.sprite.setAlpha(0.55);
+        this.scene.time.delayedCall(100, () => {
+          if (player.sprite.active) player.sprite.setAlpha(prevAlpha);
+        });
       }
     }
 
+    const inSafe = this.isInSafe(player.x, player.y, time);
+    if (inSafe && !this.wasInSafe) {
+      this.floatHint(player.x, player.y, '进入安全区', '#7eeae0');
+    }
+    this.wasInSafe = inSafe;
+
     // Soft regen in safe zone.
-    if (this.isInSafe(player.x, player.y, time) && player.stats.hp > 0) {
+    if (inSafe && player.stats.hp > 0) {
       player.stats.hp = Math.min(
         player.stats.maxHp,
         player.stats.hp + (3 * delta) / 1000,
@@ -154,11 +281,21 @@ export class ArenaMap {
     for (const rock of this.rocks) {
       const dx = px - rock.x;
       const dy = py - rock.y;
-      const dist = Math.hypot(dx, dy) || 0.001;
+      let dist = Math.hypot(dx, dy);
       const min = rock.radius + radius;
       if (dist < min) {
-        const nx = dx / dist;
-        const ny = dy / dist;
+        // Exact center → push in a stable random-ish direction.
+        let nx = dx;
+        let ny = dy;
+        if (dist < 0.001) {
+          const a = (rock.x * 12.9898 + rock.y * 78.233) % (Math.PI * 2);
+          nx = Math.cos(a);
+          ny = Math.sin(a);
+          dist = 1;
+        } else {
+          nx /= dist;
+          ny /= dist;
+        }
         px = rock.x + nx * min;
         py = rock.y + ny * min;
       }
