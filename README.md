@@ -2,7 +2,11 @@
 
 短局清怪割草（幸存者-like）网页原型：俯视角移动、自动攻击、刷怪潮、升级三选一，8 分钟一局，Boss 于 6:00 登场。
 
-## 运行
+## 在线试玩
+
+https://chareasy.github.io/RogueLikeGame/
+
+## 本地运行
 
 ```bash
 npm install
