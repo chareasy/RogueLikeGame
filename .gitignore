@@ -4,6 +4,7 @@ dist
 *.local
 .vite
 .playwright-mcp
-*.png
-*.webp
-*.mp4
+/menu-screen.png
+/gameplay-screen.png
+/*.webp
+/*.mp4

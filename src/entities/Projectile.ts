@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS } from '../config/constants';
+import { ASSET_KEYS } from '../config/assets';
 
 export class Projectile {
   active = false;
@@ -13,10 +13,10 @@ export class Projectile {
   lifeMs = 0;
   hitIds = new Set<number>();
 
-  readonly graphic: Phaser.GameObjects.Arc;
+  readonly graphic: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene) {
-    this.graphic = scene.add.circle(0, 0, 6, COLORS.projectile, 1);
+    this.graphic = scene.add.image(0, 0, ASSET_KEYS.projectile);
     this.graphic.setVisible(false);
     this.graphic.setActive(false);
     this.graphic.setDepth(8);
@@ -42,7 +42,9 @@ export class Projectile {
     this.pierceLeft = pierce;
     this.lifeMs = lifeMs;
     this.hitIds.clear();
-    this.graphic.setRadius(radius);
+    const size = radius * 2.5;
+    this.graphic.setDisplaySize(size, size);
+    this.graphic.setRotation(Math.atan2(vy, vx));
     this.graphic.setPosition(x, y);
     this.graphic.setVisible(true);
     this.graphic.setActive(true);

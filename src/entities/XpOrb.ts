@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS } from '../config/constants';
+import { ASSET_KEYS } from '../config/assets';
 
 export class XpOrb {
   active = false;
@@ -8,13 +8,14 @@ export class XpOrb {
   value = 1;
   magnetized = false;
 
-  readonly graphic: Phaser.GameObjects.Arc;
+  readonly graphic: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene) {
-    this.graphic = scene.add.circle(0, 0, 5, COLORS.xp, 1);
+    this.graphic = scene.add.image(0, 0, ASSET_KEYS.xpGem);
     this.graphic.setVisible(false);
     this.graphic.setActive(false);
     this.graphic.setDepth(4);
+    this.graphic.setDisplaySize(16, 22);
   }
 
   spawn(x: number, y: number, value: number): void {

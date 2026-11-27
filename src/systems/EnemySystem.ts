@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ASSET_KEYS } from '../config/assets';
 import { ARENA_HALF, BOSS_SPAWN_MS } from '../config/constants';
 import {
   pickWeightedKind,
@@ -25,10 +26,11 @@ export class EnemySystem {
       this.enemies.push(new Enemy(scene));
     }
     for (let i = 0; i < 80; i += 1) {
-      const graphic = scene.add.circle(0, 0, 5, 0xff9aa2, 1);
+      const graphic = scene.add.image(0, 0, ASSET_KEYS.enemyBullet);
       graphic.setVisible(false);
       graphic.setActive(false);
       graphic.setDepth(7);
+      graphic.setDisplaySize(12, 12);
       this.bullets.push({
         active: false,
         x: 0,

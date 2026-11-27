@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ASSET_KEYS } from '../config/assets';
 import { ENEMY_DEFS, type EnemyKind } from '../config/enemies';
 
 export interface EnemyBullet {
@@ -10,7 +11,7 @@ export interface EnemyBullet {
   damage: number;
   radius: number;
   lifeMs: number;
-  graphic: Phaser.GameObjects.Arc;
+  graphic: Phaser.GameObjects.Image;
 }
 
 export class Enemy {
@@ -33,18 +34,18 @@ export class Enemy {
   projectileSpeed = 0;
   flashUntil = 0;
 
-  readonly body: Phaser.GameObjects.Arc;
+  readonly body: Phaser.GameObjects.Image;
   readonly hpBarBg: Phaser.GameObjects.Rectangle;
   readonly hpBarFg: Phaser.GameObjects.Rectangle;
 
   constructor(scene: Phaser.Scene) {
-    this.body = scene.add.circle(0, 0, 12, 0xff0000, 1);
+    this.body = scene.add.image(0, 0, ASSET_KEYS.enemies.chaser);
     this.body.setVisible(false);
     this.body.setActive(false);
     this.body.setDepth(5);
 
     this.hpBarBg = scene.add.rectangle(0, 0, 28, 4, 0x000000, 0.55);
-    this.hpBarFg = scene.add.rectangle(0, 0, 28, 4, 0x7CF29C, 1);
+    this.hpBarFg = scene.add.rectangle(0, 0, 28, 4, 0x7cf29c, 1);
     this.hpBarBg.setVisible(false);
     this.hpBarFg.setVisible(false);
     this.hpBarBg.setDepth(6);
@@ -74,8 +75,10 @@ export class Enemy {
     this.nextShotAt = 0;
     this.flashUntil = 0;
 
-    this.body.setRadius(this.radius);
-    this.body.setFillStyle(def.color, 1);
+    this.body.setTexture(ASSET_KEYS.enemies[kind]);
+    const size = this.radius * 2.35;
+    this.body.setDisplaySize(size, size);
+    this.body.clearTint();
     this.body.setPosition(x, y);
     this.body.setVisible(true);
     this.body.setActive(true);
@@ -95,7 +98,7 @@ export class Enemy {
   takeDamage(amount: number, time: number): boolean {
     this.hp -= amount;
     this.flashUntil = time + 80;
-    this.body.setFillStyle(0xffffff, 1);
+    this.body.setTintFill(0xffffff);
     if (this.kind === 'elite' || this.kind === 'boss') this.syncHpBar();
     return this.hp <= 0;
   }
@@ -104,8 +107,8 @@ export class Enemy {
     const width = this.kind === 'boss' ? 80 : 36;
     const ratio = Phaser.Math.Clamp(this.hp / this.maxHp, 0, 1);
     this.hpBarFg.width = width * ratio;
-    this.hpBarBg.setPosition(this.x, this.y - this.radius - 10);
-    this.hpBarFg.setPosition(this.x - width / 2, this.y - this.radius - 10);
+    this.hpBarBg.setPosition(this.x, this.y - this.radius - 12);
+    this.hpBarFg.setPosition(this.x - width / 2, this.y - this.radius - 12);
   }
 
   update(
@@ -134,7 +137,6 @@ export class Enemy {
         moveX = nx;
         moveY = ny;
       } else {
-        // Strafe sideways when in band.
         moveX = -ny;
         moveY = nx;
       }
@@ -144,30 +146,21 @@ export class Enemy {
     this.x += moveX * step;
     this.y += moveY * step;
     this.body.setPosition(this.x, this.y);
+    this.body.setFlipX(moveX < 0);
 
-    if (time < this.flashUntil) {
-      // keep white flash
-    } else {
-      this.body.setFillStyle(ENEMY_DEFS[this.kind].color, 1);
+    if (time >= this.flashUntil) {
+      this.body.clearTint();
     }
 
     if (this.kind === 'elite' || this.kind === 'boss') this.syncHpBar();
 
-    if (
-      this.shootCooldownMs > 0 &&
-      time >= this.nextShotAt &&
-      dist < 520
-    ) {
+    if (this.shootCooldownMs > 0 && time >= this.nextShotAt && dist < 520) {
       this.nextShotAt = time + this.shootCooldownMs;
       this.fireBullet(nx, ny, bullets);
     }
   }
 
-  private fireBullet(
-    nx: number,
-    ny: number,
-    bullets: EnemyBullet[],
-  ): void {
+  private fireBullet(nx: number, ny: number, bullets: EnemyBullet[]): void {
     const bullet = bullets.find((b) => !b.active);
     if (!bullet) return;
     bullet.active = true;
@@ -178,15 +171,17 @@ export class Enemy {
     bullet.damage = this.projectileDamage;
     bullet.radius = this.kind === 'boss' ? 8 : 5;
     bullet.lifeMs = 2800;
-    bullet.graphic.setRadius(bullet.radius);
-    bullet.graphic.setFillStyle(0xff9aa2, 1);
+    const size = bullet.radius * 2.4;
+    bullet.graphic.setDisplaySize(size, size);
     bullet.graphic.setPosition(bullet.x, bullet.y);
+    bullet.graphic.setRotation(Math.atan2(ny, nx));
     bullet.graphic.setVisible(true);
     bullet.graphic.setActive(true);
   }
 
   kill(): void {
     this.active = false;
+    this.body.clearTint();
     this.body.setVisible(false);
     this.body.setActive(false);
     this.hpBarBg.setVisible(false);

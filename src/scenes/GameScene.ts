@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ASSET_KEYS } from '../config/assets';
 import {
   ARENA_HALF,
   ARENA_SIZE,
@@ -62,21 +63,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawArena(): void {
-    const g = this.add.graphics().setDepth(0);
-    g.fillStyle(COLORS.arena, 1);
-    g.fillRect(-ARENA_HALF, -ARENA_HALF, ARENA_SIZE, ARENA_SIZE);
+    const tileSize = 128;
+    for (let x = -ARENA_HALF; x < ARENA_HALF; x += tileSize) {
+      for (let y = -ARENA_HALF; y < ARENA_HALF; y += tileSize) {
+        this.add
+          .image(x + tileSize / 2, y + tileSize / 2, ASSET_KEYS.ground)
+          .setDisplaySize(tileSize, tileSize)
+          .setDepth(0)
+          .setAlpha(0.95);
+      }
+    }
 
-    g.lineStyle(2, 0x2d4066, 1);
+    const g = this.add.graphics().setDepth(1);
+    g.lineStyle(3, 0x2d4066, 1);
     g.strokeRect(-ARENA_HALF, -ARENA_HALF, ARENA_SIZE, ARENA_SIZE);
-
-    g.lineStyle(1, COLORS.grid, 0.35);
-    const step = 100;
-    for (let x = -ARENA_HALF; x <= ARENA_HALF; x += step) {
-      g.lineBetween(x, -ARENA_HALF, x, ARENA_HALF);
-    }
-    for (let y = -ARENA_HALF; y <= ARENA_HALF; y += step) {
-      g.lineBetween(-ARENA_HALF, y, ARENA_HALF, y);
-    }
+    g.fillStyle(0x050814, 0.18);
+    g.fillRect(-ARENA_HALF, -ARENA_HALF, ARENA_SIZE, ARENA_SIZE);
   }
 
   update(_time: number, delta: number): void {

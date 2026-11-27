@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
-import { ARENA_HALF, COLORS, PLAYER } from '../config/constants';
+import { ASSET_KEYS } from '../config/assets';
+import { ARENA_HALF, PLAYER } from '../config/constants';
 import { PlayerStats } from './PlayerStats';
 
 export class Player {
-  readonly sprite: Phaser.GameObjects.Arc;
+  readonly sprite: Phaser.GameObjects.Image;
+  readonly radius = PLAYER.radius;
   readonly stats = new PlayerStats();
   invulnUntil = 0;
   private readonly cursors: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -15,9 +17,9 @@ export class Player {
   };
 
   constructor(private readonly scene: Phaser.Scene) {
-    this.sprite = scene.add.circle(0, 0, PLAYER.radius, COLORS.player, 1);
+    this.sprite = scene.add.image(0, 0, ASSET_KEYS.player);
     this.sprite.setDepth(10);
-    this.sprite.setStrokeStyle(2, 0xffffff, 0.55);
+    this.sprite.setDisplaySize(PLAYER.radius * 2.4, PLAYER.radius * 2.4);
 
     const keyboard = scene.input.keyboard!;
     this.cursors = keyboard.createCursorKeys();
@@ -52,14 +54,15 @@ export class Player {
       const dist = (this.stats.speed * delta) / 1000;
       this.sprite.x = Phaser.Math.Clamp(
         this.sprite.x + dx * dist,
-        -ARENA_HALF + PLAYER.radius,
-        ARENA_HALF - PLAYER.radius,
+        -ARENA_HALF + this.radius,
+        ARENA_HALF - this.radius,
       );
       this.sprite.y = Phaser.Math.Clamp(
         this.sprite.y + dy * dist,
-        -ARENA_HALF + PLAYER.radius,
-        ARENA_HALF - PLAYER.radius,
+        -ARENA_HALF + this.radius,
+        ARENA_HALF - this.radius,
       );
+      this.sprite.setFlipX(dx < 0);
     }
 
     const flashing = time < this.invulnUntil;

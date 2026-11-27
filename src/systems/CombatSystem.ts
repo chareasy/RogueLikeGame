@@ -59,7 +59,7 @@ export class CombatSystem {
         enemy.x,
         enemy.y,
       );
-      if (dist <= player.sprite.radius + enemy.radius) {
+      if (dist <= player.radius + enemy.radius) {
         if (player.tryHurt(enemy.damage, time)) {
           enemy.nextTouchAt = time + enemy.touchCooldownMs;
         }
@@ -80,7 +80,7 @@ export class CombatSystem {
         bullet.x,
         bullet.y,
       );
-      if (dist <= player.sprite.radius + bullet.radius) {
+      if (dist <= player.radius + bullet.radius) {
         if (player.tryHurt(bullet.damage, time)) {
           bullet.active = false;
           bullet.graphic.setVisible(false);
