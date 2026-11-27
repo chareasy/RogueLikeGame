@@ -57,16 +57,9 @@ export class ArenaMap {
       const rock = this.scene.add.circle(x, y, r, 0x4a5568, 1).setDepth(2);
       rock.setStrokeStyle(4, 0x1a1f2e, 1);
       this.scene.add.circle(x - r * 0.28, y - r * 0.32, r * 0.32, 0x8a96aa, 0.45).setDepth(2);
-      this.scene.add
-        .text(x, y, '石', {
-          fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '14px',
-          color: '#c5cedd',
-          fontStyle: 'bold',
-        })
-        .setOrigin(0.5)
-        .setDepth(3)
-        .setAlpha(0.55);
+      // Cracks / moss dots — reads as rock, not a control widget.
+      this.scene.add.circle(x + r * 0.2, y + r * 0.1, r * 0.12, 0x2d3545, 0.7).setDepth(2);
+      this.scene.add.circle(x - r * 0.05, y + r * 0.25, r * 0.08, 0x3a4658, 0.65).setDepth(2);
     }
 
     const poisonSpots: Array<[number, number, number]> = [

@@ -11,6 +11,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    document.body.classList.remove('in-combat');
     audioDirector.attach(this);
     this.cameras.main.setBackgroundColor(COLORS.bg);
     this.cameras.main.fadeIn(380, 11, 16, 32);

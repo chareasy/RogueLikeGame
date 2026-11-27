@@ -55,7 +55,7 @@ export const UPGRADES: UpgradeDef[] = [
   {
     id: 'maxhp',
     title: '生命扩容',
-    description: '最大生命 +20 并回满差额',
+    description: '最大生命 +20，并立即回复 20',
     maxStacks: 6,
   },
   {

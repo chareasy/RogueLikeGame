@@ -109,7 +109,12 @@ export class Player {
     }
 
     const flashing = time < this.invulnUntil;
-    this.sprite.setAlpha(flashing ? 0.45 + 0.55 * Math.sin(time / 40) : 1);
+    // Keep silhouette readable — never fade into a ghost ring.
+    this.sprite.setAlpha(flashing ? 0.72 + 0.28 * Math.sin(time / 40) : 1);
+  }
+
+  grantInvuln(time: number, ms: number): void {
+    this.invulnUntil = Math.max(this.invulnUntil, time + ms);
   }
 
   tryHurt(amount: number, time: number, cause: DeathCause = 'contact'): boolean {
@@ -122,7 +127,9 @@ export class Player {
     this.stats.hp = Math.max(0, this.stats.hp - dmg);
     this.lastHurtCause = cause;
     this.invulnUntil = time + PLAYER.invulnMs;
-    this.scene.cameras.main.shake(80, 0.004);
+    this.scene.cameras.main.shake(110, 0.006);
+    // Edge flash so hits are readable even in dense packs.
+    this.scene.cameras.main.flash(90, 180, 30, 40);
     return true;
   }
 

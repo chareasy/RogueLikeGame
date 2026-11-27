@@ -21,6 +21,7 @@ import { ArenaMap } from '../systems/ArenaMap';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EnemySystem } from '../systems/EnemySystem';
 import { FeedbackFX } from '../systems/FeedbackFX';
+import { HealthPool } from '../systems/HealthPool';
 import { MilestoneDirector } from '../systems/MilestoneDirector';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { XpPool } from '../systems/XpPool';
@@ -36,6 +37,7 @@ export class GameScene extends Phaser.Scene {
   private enemies!: EnemySystem;
   private weapons!: WeaponSystem;
   private xpPool!: XpPool;
+  private healthPool!: HealthPool;
   private combat!: CombatSystem;
   private fx!: FeedbackFX;
   private arena!: ArenaMap;
@@ -62,6 +64,7 @@ export class GameScene extends Phaser.Scene {
     this.magnetUntil = 0;
     this.metaSnapshot = loadMeta();
     this.keyHandlers = [];
+    document.body.classList.add('in-combat');
 
     audioDirector.attach(this);
     audioDirector.unlock();
@@ -81,6 +84,7 @@ export class GameScene extends Phaser.Scene {
     this.enemies = new EnemySystem(this);
     this.weapons = new WeaponSystem(this);
     this.xpPool = new XpPool(this);
+    this.healthPool = new HealthPool(this);
     this.combat = new CombatSystem();
     this.fx = new FeedbackFX(this);
     this.milestones = new MilestoneDirector(this);
@@ -88,7 +92,16 @@ export class GameScene extends Phaser.Scene {
     this.joystick = new VirtualJoystick(this);
     this.hud = new Hud(this, character.name, !this.joystick.touchMode);
     this.levelUpUI = new LevelUpUI(this);
+    this.levelUpUI.onOpen = () => {
+      this.player.grantInvuln(this.time.now, 2500);
+    };
+    this.levelUpUI.onClose = () => {
+      this.player.grantInvuln(this.time.now, 900);
+    };
     this.resultUI = new ResultUI(this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      document.body.classList.remove('in-combat');
+    });
     this.pauseUI = new PauseUI(this, this.joystick.touchMode);
     this.pauseUI.muted = audioDirector.isMuted;
 
@@ -116,11 +129,11 @@ export class GameScene extends Phaser.Scene {
       ARENA_SIZE + 80,
     );
 
-    for (let i = 0; i < 8; i += 1) {
-      this.enemies.spawnKind('chaser', 0, 0, 280 + i * 36);
+    for (let i = 0; i < 5; i += 1) {
+      this.enemies.spawnKind('chaser', 0, 0, 300 + i * 40);
     }
-    for (let i = 0; i < 4; i += 1) {
-      this.enemies.spawnKind('swarm', 0, 0, 340 + i * 28);
+    for (let i = 0; i < 2; i += 1) {
+      this.enemies.spawnKind('swarm', 0, 0, 360 + i * 32);
     }
 
     this.bindPauseKeys();
@@ -226,6 +239,7 @@ export class GameScene extends Phaser.Scene {
       (kind) => {
         this.pulseMagnet(time);
         audioDirector.playKill(kind);
+        this.maybeDropHeal(time);
       },
       this.fx,
     );
@@ -237,6 +251,14 @@ export class GameScene extends Phaser.Scene {
     this.combat.resolveEnemyContact(time, this.player, this.enemies.enemies);
     this.combat.resolveEnemyBullets(time, this.player, this.enemies.bullets);
 
+    // Soft pressure when strong clear leaves the field empty.
+    const alive = this.enemies.aliveCount;
+    let bias = 1;
+    if (alive < 8) bias = 1.35;
+    else if (alive < 16) bias = 1.15;
+    else if (alive > 55) bias = 0.85;
+    this.enemies.setDensityBias(bias);
+
     const magnetBoost = time < this.magnetUntil;
     const gained = this.combat.collectXp(
       delta,
@@ -244,6 +266,7 @@ export class GameScene extends Phaser.Scene {
       this.xpPool.orbs,
       magnetBoost,
     );
+    this.healthPool.collect(this.player);
     if (gained > 0) {
       const levels = this.player.stats.addXp(gained);
       if (levels > 0) {
@@ -279,6 +302,20 @@ export class GameScene extends Phaser.Scene {
     this.xpPool.magnetizeAll();
   }
 
+  private maybeDropHeal(time: number): void {
+    // Early sustain packs — rarer after the opening minute.
+    const chance = this.elapsedMs < 90_000 ? 0.1 : 0.035;
+    if (Math.random() > chance) return;
+    const ang = Math.random() * Math.PI * 2;
+    const d = 20 + Math.random() * 50;
+    this.healthPool.spawn(
+      this.player.x + Math.cos(ang) * d,
+      this.player.y + Math.sin(ang) * d,
+      this.elapsedMs < 60_000 ? 22 : 16,
+    );
+    void time;
+  }
+
   private flushSkillHits(): void {
     const pending = this.weapons.pendingHits;
     while (pending.length > 0) {
@@ -298,6 +335,7 @@ export class GameScene extends Phaser.Scene {
       this.xpPool.spawn(kill.x, kill.y, kill.xp);
       this.pulseMagnet(this.time.now);
       audioDirector.playKill(kill.kind);
+      this.maybeDropHeal(this.time.now);
     }
   }
 
@@ -320,6 +358,7 @@ export class GameScene extends Phaser.Scene {
   private finish(won: boolean): void {
     if (this.ended) return;
     this.ended = true;
+    document.body.classList.remove('in-combat');
     this.pauseUI.hide();
     this.levelUpUI.dismiss();
     this.hud.setVisible(false);
@@ -342,6 +381,7 @@ export class GameScene extends Phaser.Scene {
       this.player.character.name,
       unlock,
       won ? undefined : this.player.lastHurtCause,
+      this.player.character.id,
     );
   }
 }

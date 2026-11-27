@@ -30,6 +30,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.keyHandlers = [];
     this.meta = loadMeta();
 
+    document.body.classList.remove('in-combat');
     audioDirector.attach(this);
     audioDirector.unlock();
     audioDirector.playMenu();
@@ -212,7 +213,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         70,
         unlockBits.length > 0
           ? unlockBits.join(' · ')
-          : `未解锁 · 存活${Math.floor(BOOST_SURVIVE_MS / 60000)}分或击杀${BOOST_KILL_TARGET}`,
+          : `可用 · 起始强化未解锁（${Math.floor(BOOST_SURVIVE_MS / 60000)}分/${BOOST_KILL_TARGET}杀）`,
         {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '11px',
@@ -281,7 +282,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     }
     const boost = hasStarterBoost(this.meta, id)
       ? '已解锁起始武器强化（开局更强）'
-      : '存活≥2分钟 / 击杀40 / 胜利 → 解锁起始强化';
+      : '角色可用 · 存活≥2分钟 / 击杀40 / 胜利 → 解锁起始强化';
     const tint = hasTintSkin(this.meta, id)
       ? '已解锁金色皮肤'
       : '胜利该角色 → 解锁金色皮肤';

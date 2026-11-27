@@ -19,6 +19,8 @@ export class EnemySystem {
   private bossSpawned = false;
   private readonly maxEnemies: number;
   private phaseBanner?: Phaser.GameObjects.Container;
+  /** Soft density bias: >1 when field is empty (high clear power). */
+  private densityBias = 1;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -96,6 +98,11 @@ export class EnemySystem {
 
   get bossDefeated(): boolean {
     return this.bossSpawned && !this.bossAlive;
+  }
+
+  /** Raise spawn pressure when the field is too empty (e.g. strong mage clear). */
+  setDensityBias(bias: number): void {
+    this.densityBias = Phaser.Math.Clamp(bias, 0.75, 1.55);
   }
 
   update(time: number, delta: number, elapsedMs: number, player: Player): void {
@@ -245,12 +252,14 @@ export class EnemySystem {
       this.spawnFlankFormation(player.x, player.y);
     }
 
-    if (this.aliveCount >= wave.softCap) return;
+    const softCap = Math.floor(wave.softCap * this.densityBias);
+    if (this.aliveCount >= softCap) return;
 
+    const interval = Math.max(180, wave.intervalMs / this.densityBias);
     this.spawnAcc += delta;
-    while (this.spawnAcc >= wave.intervalMs) {
-      this.spawnAcc -= wave.intervalMs;
-      if (this.aliveCount >= Math.min(wave.softCap, this.maxEnemies)) break;
+    while (this.spawnAcc >= interval) {
+      this.spawnAcc -= interval;
+      if (this.aliveCount >= Math.min(softCap, this.maxEnemies)) break;
       const kind = pickWeightedKind(wave.weights);
       this.spawnKind(kind, player.x, player.y, 280 + Math.random() * 160);
     }

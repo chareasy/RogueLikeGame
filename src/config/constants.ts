@@ -17,8 +17,8 @@ export const PLAYER = {
   invulnMs: 650,
   pickupRadius: 90,
   /** Higher base + growth so first power spike lands ~45–75s, not ~15s. */
-  xpToLevelBase: 14,
-  xpToLevelGrowth: 1.22,
+  xpToLevelBase: 18,
+  xpToLevelGrowth: 1.24,
   /** Extra magnet window after each kill (ms). */
   killMagnetMs: 900,
 };

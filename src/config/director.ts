@@ -13,17 +13,25 @@ export interface SpawnWave {
 
 export const SPAWN_TIMELINE: SpawnWave[] = [
   {
+    // Soft open: give players room to learn controls / first upgrades.
     fromMs: 0,
-    toMs: 60_000,
-    intervalMs: 520,
-    softCap: 48,
-    weights: { chaser: 3, swarm: 2 },
+    toMs: 30_000,
+    intervalMs: 720,
+    softCap: 22,
+    weights: { chaser: 3, swarm: 1 },
   },
   {
-    fromMs: 60_000,
+    fromMs: 30_000,
+    toMs: 75_000,
+    intervalMs: 560,
+    softCap: 42,
+    weights: { chaser: 3, swarm: 2, speeder: 1 },
+  },
+  {
+    fromMs: 75_000,
     toMs: 150_000,
-    intervalMs: 380,
-    softCap: 90,
+    intervalMs: 400,
+    softCap: 80,
     weights: { chaser: 3, speeder: 2, swarm: 3 },
     eliteEveryMs: 55_000,
   },

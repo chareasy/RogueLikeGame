@@ -7,6 +7,7 @@ import {
   type UpgradeDef,
   type UpgradeId,
 } from '../config/upgrades';
+import { pinToScreen } from './fixUi';
 import { UiMotion } from './UiMotion';
 
 export class LevelUpUI {
@@ -20,19 +21,23 @@ export class LevelUpUI {
   private currentChoices: UpgradeDef[] = [];
   private characterId: CharacterId = 'knight';
   private readonly keyHandler: (event: KeyboardEvent) => void;
+  onOpen: (() => void) | null = null;
+  onClose: (() => void) | null = null;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(200);
     this.root.setVisible(false);
 
-    const dim = scene.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      GAME_WIDTH,
-      GAME_HEIGHT,
-      0x050814,
-      0.72,
-    );
+    const dim = scene.add
+      .rectangle(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2,
+        GAME_WIDTH,
+        GAME_HEIGHT,
+        0x050814,
+        0.72,
+      )
+      .setScrollFactor(0);
 
     const title = scene.add
       .text(GAME_WIDTH / 2, 70, '升级！选择一项强化', {
@@ -41,7 +46,8 @@ export class LevelUpUI {
         color: '#e8eefc',
         fontStyle: 'bold',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setScrollFactor(0);
 
     this.hint = scene.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT - 36, '按 1 / 2 / 3 选择 · 金色角标=适合当前角色 · 前几次偏本职', {
@@ -49,9 +55,11 @@ export class LevelUpUI {
         fontSize: '13px',
         color: '#9fb0d0',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setScrollFactor(0);
 
     this.root.add([dim, title, this.hint]);
+    pinToScreen(this.root);
 
     this.keyHandler = (event: KeyboardEvent) => {
       if (!this.open) return;
@@ -95,9 +103,11 @@ export class LevelUpUI {
       return;
     }
 
+    const wasOpen = this.open;
     this.clearCards();
     this.open = true;
     this.root.setVisible(true);
+    if (!wasOpen) this.onOpen?.();
 
     this.currentChoices = pickUpgradeChoices(this.stacks, 3, this.characterId);
     const startX = GAME_WIDTH / 2 - (this.currentChoices.length - 1) * 140;
@@ -146,10 +156,11 @@ export class LevelUpUI {
     hotkey: number,
   ): Phaser.GameObjects.Container {
     const preferred = isPreferredUpgrade(this.characterId, upgrade.id);
-    const card = this.scene.add.container(x, y);
+    const card = this.scene.add.container(x, y).setScrollFactor(0);
     const bg = this.scene.add
       .rectangle(0, 0, 240, preferred ? 188 : 168, 0x1a2744, 0.95)
       .setStrokeStyle(2, preferred ? 0xffe66d : 0x4fd1c5, preferred ? 1 : 0.9)
+      .setScrollFactor(0)
       .setInteractive({ useHandCursor: true });
 
     const keyBadge = this.scene.add
@@ -215,6 +226,7 @@ export class LevelUpUI {
 
     children.push(title, desc);
     card.add(children);
+    pinToScreen(card);
     return card;
   }
 
@@ -236,9 +248,11 @@ export class LevelUpUI {
   }
 
   private close(): void {
+    const wasOpen = this.open;
     this.clearCards();
     this.open = false;
     this.root.setVisible(false);
     this.pendingLevels = 0;
+    if (wasOpen) this.onClose?.();
   }
 }

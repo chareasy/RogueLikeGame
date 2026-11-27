@@ -197,7 +197,17 @@ export class Hud {
     const hpRatio = Phaser.Math.Clamp(stats.hp / stats.maxHp, 0, 1);
     this.targetHpWidth = 180 * hpRatio;
     this.hpBarFg.width += (this.targetHpWidth - this.hpBarFg.width) * 0.18;
-    this.hpBarFg.setFillStyle(hpRatio < 0.3 ? 0xff6b6b : 0x4fd1c5, 1);
+    if (hpRatio < 0.3) {
+      this.hpBarFg.setFillStyle(0xff6b6b, 1);
+      this.hpBarBg.setScale(1, 1.35);
+      this.hpBarFg.setScale(1, 1.35);
+      this.hpText.setColor('#ff8a8a');
+    } else {
+      this.hpBarFg.setFillStyle(0x4fd1c5, 1);
+      this.hpBarBg.setScale(1, 1);
+      this.hpBarFg.setScale(1, 1);
+      this.hpText.setColor(COLORS.hud);
+    }
 
     const xpRatio = Phaser.Math.Clamp(stats.xp / stats.xpToNext, 0, 1);
     this.targetXpWidth = 180 * xpRatio;

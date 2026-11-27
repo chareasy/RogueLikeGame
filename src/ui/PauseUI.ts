@@ -1,13 +1,8 @@
 import Phaser from 'phaser';
 import { audioDirector } from '../audio/AudioDirector';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { pinMany, pinToScreen } from './fixUi';
 import { UiMotion } from './UiMotion';
-
-export interface PauseOptions {
-  muted: boolean;
-  stickForced: boolean;
-  touchMode: boolean;
-}
 
 /**
  * Lightweight Esc pause: resume / mute / stick toggle / quit to select.
@@ -29,7 +24,8 @@ export class PauseUI {
     this.root.setVisible(false);
 
     const dim = scene.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050814, 0.72);
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050814, 0.72)
+      .setScrollFactor(0);
 
     const title = scene.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 120, '暂停', {
@@ -38,7 +34,8 @@ export class PauseUI {
         color: '#e8eefc',
         fontStyle: 'bold',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setScrollFactor(0);
     UiMotion.breatheTitle(scene, title);
 
     const resume = this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, 220, 44, '继续 (Esc)', () => {
@@ -73,7 +70,8 @@ export class PauseUI {
         fontSize: '13px',
         color: '#9fb0d0',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setScrollFactor(0);
 
     this.root.add([
       dim,
@@ -88,6 +86,20 @@ export class PauseUI {
       quit.label,
       hint,
     ]);
+    pinToScreen(this.root);
+    pinMany(
+      dim,
+      title,
+      resume.bg,
+      resume.label,
+      muteBtn.bg,
+      muteBtn.label,
+      stickBtn.bg,
+      stickBtn.label,
+      quit.bg,
+      quit.label,
+      hint,
+    );
     this.refreshLabels();
   }
 
@@ -102,6 +114,7 @@ export class PauseUI {
     const bg = this.scene.add
       .rectangle(x, y, w, h, 0x243556, 1)
       .setStrokeStyle(2, 0x4fd1c5, 0.9)
+      .setScrollFactor(0)
       .setInteractive({ useHandCursor: true });
     const label = this.scene.add
       .text(x, y, text, {
@@ -110,7 +123,8 @@ export class PauseUI {
         color: '#e8eefc',
         fontStyle: 'bold',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setScrollFactor(0);
     bg.on('pointerover', () => bg.setFillStyle(0x2f4468, 1));
     bg.on('pointerout', () => bg.setFillStyle(0x243556, 1));
     bg.on('pointerdown', onClick);
@@ -138,6 +152,7 @@ export class PauseUI {
     this.onStickChange = handlers.onStickChange;
     this.open = true;
     this.root.setVisible(true);
+    pinToScreen(this.root);
     this.refreshLabels();
   }
 
